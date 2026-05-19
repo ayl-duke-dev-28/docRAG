@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>docRAG</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="panel library">
+        <div class="brand">
+          <div>
+            <h1>docRAG</h1>
+            <p>Upload papers, index them, and ask research questions with source-backed answers.</p>
+          </div>
+          <span id="mode-pill">Local retrieval</span>
+        </div>
+
+        <label class="upload-zone" for="paper-input">
+          <input id="paper-input" type="file" accept=".pdf,.txt,.md" multiple />
+          <span>Drop or choose papers</span>
+          <small>PDF, TXT, or Markdown</small>
+        </label>
+
+        <div class="doc-header">
+          <h2>Library</h2>
+          <button id="refresh-docs" type="button">Refresh</button>
+        </div>
+        <div id="documents" class="documents"></div>
+      </section>
+
+      <section class="panel chat">
+        <div id="messages" class="messages">
+          <div class="message assistant">
+            <strong>Ready.</strong>
+            <p>Upload research papers, then ask a precise question. Answers include citations to retrieved chunks.</p>
+          </div>
+        </div>
+        <form id="query-form" class="query-form">
+          <textarea id="question" placeholder="Ask a question about your papers..." rows="3"></textarea>
+          <button type="submit">Ask</button>
+        </form>
+      </section>
+    </main>
+    <script src="/static/app.js"></script>
+  </body>
+</html>

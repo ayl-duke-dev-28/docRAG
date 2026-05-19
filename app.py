@@ -1,0 +1,84 @@
+import tempfile
+from pathlib import Path
+from typing import List
+
+from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+
+from docrag.config import BASE_DIR
+from docrag.ingest import ingest_file
+from docrag.retrieval import answer, source
+from docrag.storage import init_db, list_documents
+
+
+app = FastAPI(title="docRAG", version="0.1.0")
+app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
+
+
+class QueryRequest(BaseModel):
+    question: str
+    top_k: int = 6
+
+
+@app.on_event("startup")
+def startup() -> None:
+    init_db()
+
+
+@app.get("/")
+def index():
+    return FileResponse(BASE_DIR / "static" / "index.html")
+
+
+@app.get("/api/documents")
+def documents():
+    return [dict(row) for row in list_documents()]
+
+
+@app.get("/api/health")
+def health():
+    docs = list_documents()
+    return {
+        "status": "ok",
+        "documents": len(docs),
+        "chunks": sum(row["chunks"] for row in docs),
+    }
+
+
+@app.post("/api/upload")
+async def upload(files: List[UploadFile] = File(...)):
+    results = []
+    for uploaded in files:
+        suffix = Path(uploaded.filename or "").suffix.lower()
+        if suffix not in {".pdf", ".txt", ".md"}:
+            raise HTTPException(status_code=400, detail="Only PDF, TXT, and Markdown files are supported.")
+
+        with tempfile.NamedTemporaryFile(delete=True, suffix=suffix) as temp:
+            while True:
+                chunk = await uploaded.read(1024 * 1024)
+                if not chunk:
+                    break
+                temp.write(chunk)
+            temp.flush()
+            try:
+                results.append(ingest_file(Path(temp.name), uploaded.filename or "paper"))
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc))
+    return {"results": results}
+
+
+@app.post("/api/query")
+def query(request: QueryRequest):
+    if not request.question.strip():
+        raise HTTPException(status_code=400, detail="Question is required.")
+    return answer(request.question.strip(), max(1, min(request.top_k, 12)))
+
+
+@app.get("/api/source/{chunk_id}")
+def get_source(chunk_id: int):
+    result = source(chunk_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Source not found.")
+    return result
