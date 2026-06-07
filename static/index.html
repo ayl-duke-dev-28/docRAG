@@ -27,6 +27,27 @@
           <h2>Library</h2>
           <button id="refresh-docs" type="button">Refresh</button>
         </div>
+        <div class="doc-controls" aria-label="Document filters">
+          <label class="sr-only" for="doc-search">Search documents</label>
+          <input id="doc-search" type="search" placeholder="Search documents" autocomplete="off" />
+          <div class="doc-control-row">
+            <label class="sr-only" for="doc-type">Filter by file type</label>
+            <select id="doc-type">
+              <option value="all">All types</option>
+              <option value="pdf">PDF</option>
+              <option value="txt">TXT</option>
+              <option value="md">Markdown</option>
+            </select>
+            <label class="sr-only" for="doc-sort">Sort documents</label>
+            <select id="doc-sort">
+              <option value="newest">Newest</option>
+              <option value="name">Name</option>
+              <option value="pages">Pages</option>
+              <option value="chunks">Chunks</option>
+            </select>
+          </div>
+          <div id="doc-count" class="meta"></div>
+        </div>
         <div id="documents" class="documents"></div>
       </section>
 

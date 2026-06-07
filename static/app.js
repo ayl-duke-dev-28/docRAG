@@ -1,10 +1,16 @@
 const documentsEl = document.querySelector("#documents");
 const inputEl = document.querySelector("#paper-input");
 const refreshEl = document.querySelector("#refresh-docs");
+const docSearchEl = document.querySelector("#doc-search");
+const docTypeEl = document.querySelector("#doc-type");
+const docSortEl = document.querySelector("#doc-sort");
+const docCountEl = document.querySelector("#doc-count");
 const formEl = document.querySelector("#query-form");
 const questionEl = document.querySelector("#question");
 const messagesEl = document.querySelector("#messages");
 const modePill = document.querySelector("#mode-pill");
+
+let allDocuments = [];
 
 function escapeHtml(value) {
   return value.replace(/[&<>"']/g, (char) => ({
@@ -25,19 +31,58 @@ function addMessage(role, html) {
   return node;
 }
 
-async function loadDocuments() {
-  const response = await fetch("/api/documents");
-  const docs = await response.json();
-  if (!docs.length) {
+function documentType(doc) {
+  const match = doc.filename.toLowerCase().match(/\.([a-z0-9]+)$/);
+  return match ? match[1] : "";
+}
+
+function filteredDocuments() {
+  const query = docSearchEl.value.trim().toLowerCase();
+  const type = docTypeEl.value;
+  const sort = docSortEl.value;
+
+  return allDocuments
+    .filter((doc) => {
+      const matchesQuery = !query || doc.filename.toLowerCase().includes(query);
+      const matchesType = type === "all" || documentType(doc) === type;
+      return matchesQuery && matchesType;
+    })
+    .sort((a, b) => {
+      if (sort === "name") return a.filename.localeCompare(b.filename);
+      if (sort === "pages") return b.pages - a.pages || a.filename.localeCompare(b.filename);
+      if (sort === "chunks") return b.chunks - a.chunks || a.filename.localeCompare(b.filename);
+      return new Date(b.created_at) - new Date(a.created_at);
+    });
+}
+
+function renderDocuments() {
+  const docs = filteredDocuments();
+  docCountEl.textContent = allDocuments.length
+    ? `${docs.length} of ${allDocuments.length} documents`
+    : "";
+
+  if (!allDocuments.length) {
     documentsEl.innerHTML = '<div class="meta">No papers uploaded yet.</div>';
     return;
   }
+
+  if (!docs.length) {
+    documentsEl.innerHTML = '<div class="meta">No documents match these filters.</div>';
+    return;
+  }
+
   documentsEl.innerHTML = docs.map((doc) => `
     <article class="doc">
       <strong>${escapeHtml(doc.filename)}</strong>
       <div class="meta">${doc.pages} pages · ${doc.chunks} chunks · ${new Date(doc.created_at).toLocaleString()}</div>
     </article>
   `).join("");
+}
+
+async function loadDocuments() {
+  const response = await fetch("/api/documents");
+  allDocuments = await response.json();
+  renderDocuments();
 }
 
 async function uploadFiles(files) {
@@ -95,6 +140,9 @@ inputEl.addEventListener("change", async (event) => {
 });
 
 refreshEl.addEventListener("click", loadDocuments);
+docSearchEl.addEventListener("input", renderDocuments);
+docTypeEl.addEventListener("change", renderDocuments);
+docSortEl.addEventListener("change", renderDocuments);
 
 formEl.addEventListener("submit", async (event) => {
   event.preventDefault();
