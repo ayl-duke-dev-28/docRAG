@@ -7,10 +7,10 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from docrag.config import BASE_DIR
+from docrag.config import BASE_DIR, UPLOAD_DIR
 from docrag.ingest import ingest_file
 from docrag.retrieval import answer, source
-from docrag.storage import init_db, list_documents
+from docrag.storage import delete_document, get_document, init_db, list_documents, rename_document
 
 
 app = FastAPI(title="docRAG", version="0.1.0")
@@ -20,6 +20,29 @@ app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 class QueryRequest(BaseModel):
     question: str
     top_k: int = 6
+
+
+class RenameDocumentRequest(BaseModel):
+    filename: str
+
+
+def clean_document_filename(filename: str) -> str:
+    cleaned = filename.strip()
+    if not cleaned:
+        raise HTTPException(status_code=400, detail="Filename is required.")
+    if "/" in cleaned or "\\" in cleaned:
+        raise HTTPException(status_code=400, detail="Filename cannot contain path separators.")
+    if cleaned in {".", ".."}:
+        raise HTTPException(status_code=400, detail="Filename is invalid.")
+    return cleaned
+
+
+def stored_upload_path(stored_path: str) -> Path:
+    path = Path(stored_path).resolve()
+    upload_root = UPLOAD_DIR.resolve()
+    if path.parent != upload_root:
+        raise HTTPException(status_code=400, detail="Stored file path is invalid.")
+    return path
 
 
 @app.on_event("startup")
@@ -35,6 +58,43 @@ def index():
 @app.get("/api/documents")
 def documents():
     return [dict(row) for row in list_documents()]
+
+
+@app.patch("/api/documents/{document_id}")
+def rename_document_api(document_id: int, request: RenameDocumentRequest):
+    filename = clean_document_filename(request.filename)
+    document = rename_document(document_id, filename)
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found.")
+    return dict(document)
+
+
+@app.delete("/api/documents/{document_id}")
+def delete_document_api(document_id: int):
+    existing = get_document(document_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Document not found.")
+    path = stored_upload_path(existing["stored_path"])
+
+    document = delete_document(document_id)
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found.")
+
+    if path.exists():
+        path.unlink()
+    return {"status": "deleted", "document_id": document_id}
+
+
+@app.get("/api/documents/{document_id}/file")
+def document_file(document_id: int):
+    document = get_document(document_id)
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found.")
+
+    path = stored_upload_path(document["stored_path"])
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Stored file not found.")
+    return FileResponse(path, filename=document["filename"])
 
 
 @app.get("/api/health")

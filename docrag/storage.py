@@ -43,6 +43,18 @@ CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(
 """
 
 
+FTS_SCHEMA = """
+CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(
+  text,
+  filename UNINDEXED,
+  page_start UNINDEXED,
+  page_end UNINDEXED,
+  content='',
+  tokenize='porter unicode61'
+);
+"""
+
+
 @contextmanager
 def connect() -> Iterator[sqlite3.Connection]:
     ensure_dirs()
@@ -66,6 +78,14 @@ def document_by_hash(content_sha256: str) -> Optional[sqlite3.Row]:
         return conn.execute(
             "SELECT * FROM documents WHERE content_sha256 = ?",
             (content_sha256,),
+        ).fetchone()
+
+
+def get_document(document_id: int) -> Optional[sqlite3.Row]:
+    with connect() as conn:
+        return conn.execute(
+            "SELECT * FROM documents WHERE id = ?",
+            (document_id,),
         ).fetchone()
 
 
@@ -126,6 +146,46 @@ def list_documents() -> List[sqlite3.Row]:
             ORDER BY d.created_at DESC
             """
         ).fetchall()
+
+
+def rename_document(document_id: int, filename: str) -> Optional[sqlite3.Row]:
+    with connect() as conn:
+        result = conn.execute(
+            "UPDATE documents SET filename = ? WHERE id = ?",
+            (filename, document_id),
+        )
+        if result.rowcount == 0:
+            return None
+        return conn.execute(
+            "SELECT * FROM documents WHERE id = ?",
+            (document_id,),
+        ).fetchone()
+
+
+def rebuild_fts(conn: sqlite3.Connection) -> None:
+    conn.execute("DROP TABLE IF EXISTS chunks_fts")
+    conn.executescript(FTS_SCHEMA)
+    conn.execute(
+        """
+        INSERT INTO chunks_fts(rowid, text, filename, page_start, page_end)
+        SELECT c.id, c.text, d.filename, c.page_start, c.page_end
+        FROM chunks c
+        JOIN documents d ON d.id = c.document_id
+        """
+    )
+
+
+def delete_document(document_id: int) -> Optional[sqlite3.Row]:
+    with connect() as conn:
+        document = conn.execute(
+            "SELECT * FROM documents WHERE id = ?",
+            (document_id,),
+        ).fetchone()
+        if not document:
+            return None
+        conn.execute("DELETE FROM documents WHERE id = ?", (document_id,))
+        rebuild_fts(conn)
+        return document
 
 
 def get_chunk(chunk_id: int) -> Optional[sqlite3.Row]:

@@ -73,10 +73,24 @@ function renderDocuments() {
 
   documentsEl.innerHTML = docs.map((doc) => `
     <article class="doc">
-      <strong>${escapeHtml(doc.filename)}</strong>
+      <div class="doc-title">
+        <strong>${escapeHtml(doc.filename)}</strong>
+        ${renderDocumentActions(doc)}
+      </div>
       <div class="meta">${doc.pages} pages · ${doc.chunks} chunks · ${new Date(doc.created_at).toLocaleString()}</div>
     </article>
   `).join("");
+}
+
+function renderDocumentActions(doc) {
+  if (!doc.id) return "";
+  return `
+    <div class="doc-actions">
+      <a class="doc-action" href="/api/documents/${doc.id}/file" target="_blank" rel="noopener">Open</a>
+      <button class="doc-action" type="button" data-action="rename" data-document-id="${doc.id}">Rename</button>
+      <button class="doc-action danger" type="button" data-action="delete" data-document-id="${doc.id}">Delete</button>
+    </div>
+  `;
 }
 
 async function loadDocuments() {
@@ -99,6 +113,24 @@ async function uploadFiles(files) {
   }).join("<br>");
   addMessage("assistant", `<p>${summary}</p>`);
   await loadDocuments();
+}
+
+async function updateDocument(documentId, filename) {
+  const response = await fetch(`/api/documents/${documentId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ filename }),
+  });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.detail || "Rename failed.");
+  return payload;
+}
+
+async function removeDocument(documentId) {
+  const response = await fetch(`/api/documents/${documentId}`, { method: "DELETE" });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.detail || "Delete failed.");
+  return payload;
 }
 
 function renderSources(sources) {
@@ -143,6 +175,35 @@ refreshEl.addEventListener("click", loadDocuments);
 docSearchEl.addEventListener("input", renderDocuments);
 docTypeEl.addEventListener("change", renderDocuments);
 docSortEl.addEventListener("change", renderDocuments);
+
+documentsEl.addEventListener("click", async (event) => {
+  const button = event.target.closest("button[data-action]");
+  if (!button) return;
+
+  const documentId = button.dataset.documentId;
+  const doc = allDocuments.find((item) => String(item.id) === documentId);
+  if (!doc) return;
+
+  try {
+    if (button.dataset.action === "rename") {
+      const filename = window.prompt("Rename document", doc.filename);
+      if (filename === null || filename.trim() === doc.filename) return;
+      await updateDocument(documentId, filename.trim());
+      addMessage("assistant", `<p>Renamed ${escapeHtml(doc.filename)}.</p>`);
+      await loadDocuments();
+    }
+
+    if (button.dataset.action === "delete") {
+      const confirmed = window.confirm(`Delete "${doc.filename}" and its indexed chunks?`);
+      if (!confirmed) return;
+      await removeDocument(documentId);
+      addMessage("assistant", `<p>Deleted ${escapeHtml(doc.filename)}.</p>`);
+      await loadDocuments();
+    }
+  } catch (error) {
+    addMessage("assistant", `<p>${escapeHtml(error.message)}</p>`);
+  }
+});
 
 formEl.addEventListener("submit", async (event) => {
   event.preventDefault();

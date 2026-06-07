@@ -176,10 +176,43 @@ button:disabled {
   background: var(--surface);
 }
 
+.doc-title {
+  display: grid;
+  gap: 8px;
+}
+
 .doc strong {
   display: block;
   overflow-wrap: anywhere;
   font-size: 14px;
+}
+
+.doc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.doc-action {
+  border: 1px solid #cfd9d5;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #20524b;
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 6px 9px;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.doc-action:hover {
+  border-color: var(--accent);
+}
+
+.doc-action.danger {
+  color: #8a2c2c;
 }
 
 .meta {
