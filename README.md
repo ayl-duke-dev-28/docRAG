@@ -1,5 +1,10 @@
 # docRAG → LabGraph (work in progress)
 
+[![CI](https://github.com/ayl-duke-dev-28/docRAG/actions/workflows/ci.yml/badge.svg)](https://github.com/ayl-duke-dev-28/docRAG/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)](https://www.python.org/)
+[![Tests](https://img.shields.io/badge/tests-32%20passing-brightgreen)](./tests)
+[![Coverage](https://img.shields.io/badge/coverage-93%25-brightgreen)](./evals)
+
 > **I'm actively rebuilding this project.** It started as **docRAG**, a
 > single-source RAG app (upload PDFs/TXT/MD, ask questions with citations).
 > I'm turning it into **LabGraph**, a multi-source knowledge-graph RAG bot
@@ -59,6 +64,10 @@ at query time, and returns both the answer and the path.
 - **Reports** — Markdown + JSON output showing per-question pass/fail and the
   specific reason for each failure.
 - **Tests** — 32 unit + integration tests, 93% coverage on `evals/`.
+- **GitHub Actions CI** — `.github/workflows/ci.yml` runs the test suite and
+  validates the eval question schema on every push and PR, across Python
+  3.11 and 3.12. Coverage floor enforced at 80%. Eval reports uploaded as
+  build artifacts.
 
 ## Roadmap
 
@@ -149,6 +158,8 @@ evals/              — eval harness (shipped, Week 1)
   runner.py         CLI entry point
   report.py         Markdown + JSON reports
 tests/              — 32 tests, 93% coverage on evals/
+.github/workflows/
+  ci.yml            — pytest + eval schema validation on push/PR
 ```
 
 Not yet built (Weeks 2–6): `labgraph/extract.py`, `labgraph/graph.py`,
