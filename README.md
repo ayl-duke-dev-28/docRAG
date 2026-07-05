@@ -94,10 +94,8 @@ loop on every push.
   to a dedicated SQLite file (`labgraph_entities` + `labgraph_relations`
   tables with the right indexes). Round-trip preserves aliases, attrs, and
   provenance chunk IDs.
-- **Verified end-to-end:** extract two chunks (a paper + a meeting note) →
-  build graph → resolve
-  `person:alex-liu → paper:training-stability-2024 → method:curriculum-learning → decision:march-team-sync`
-  as a real multi-hop path.
+- **Verified end-to-end** — the [Multi-hop demo](#multi-hop-demo-the-proof-it-works)
+  section below shows the runnable snippet and its actual output.
 - **47 new tests, 95% coverage on `labgraph/`.**
 
 ### New: continuous integration
@@ -193,8 +191,51 @@ python -m evals.runner --sut baseline --output-md evals/reports/latest.md
 python -m evals.runner --sut baseline --min-pass-rate 0.75
 
 # unit + integration tests
-pytest --cov=evals
+pytest --cov=evals --cov=labgraph
 ```
+
+## Multi-hop demo (the proof it works)
+
+Two chunks in — one paper, one meeting note. The graph resolves a four-node
+path connecting a person to a decision through a paper and a method. This is
+the exact capability the whole project exists to demonstrate.
+
+```python
+from pathlib import Path
+from labgraph import AliasResolver, LabGraph, RegexExtractor
+from labgraph.extract import Chunk, extract_many
+
+aliases = AliasResolver.from_yaml(Path("labgraph/aliases.yaml"))
+chunks = [
+    Chunk(id="c1", filename="training_stability_2024.pdf",
+          text="Alex Liu introduced curriculum learning to fix training instability."),
+    Chunk(id="c2", filename="2024-03-14-team-sync.docx",
+          text="In the March team sync we decided to adopt curriculum learning."),
+]
+
+result = extract_many(RegexExtractor(aliases=aliases), chunks)
+g = LabGraph()
+for e in result.entities: g.add_entity(e)
+for r in result.relations: g.add_relation(r)
+
+path = g.shortest_path("person:alex-liu", "decision:march-team-sync", max_depth=4)
+print(f"entities={g.entity_count} relations={g.relation_count}")
+print(" -> ".join(path))
+```
+
+Real output (from the current build on `main`):
+
+```
+entities=5 relations=4
+person:alex-liu -> paper:training-stability-2024 -> method:curriculum-learning -> decision:march-team-sync
+```
+
+Reading the path: *Alex Liu authored a paper that uses curriculum learning,
+and that method was decided in the March team sync.* Four nodes, three
+typed edges, one paper + one meeting note bridged. Standard RAG cannot do
+this — it retrieves passages, not typed relationships. Once the OpenAI
+extractor and KG-aware retrieval land (Weeks 2b + 4), the same traversal
+runs on real lab documents against the eval set.
 
 ## Architecture
 
