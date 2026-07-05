@@ -32,7 +32,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run unit + integration tests
-        run: pytest --cov=evals --cov-report=term-missing --cov-fail-under=80
+        run: pytest --cov=evals --cov=labgraph --cov-report=term-missing --cov-fail-under=80
 
       - name: Validate eval question schema
         run: python -m evals.runner --questions evals/questions.yaml --sut null

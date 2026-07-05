@@ -2,8 +2,8 @@
 
 [![CI](https://github.com/ayl-duke-dev-28/docRAG/actions/workflows/ci.yml/badge.svg)](https://github.com/ayl-duke-dev-28/docRAG/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-32%20passing-brightgreen)](./tests)
-[![Coverage](https://img.shields.io/badge/coverage-93%25-brightgreen)](./evals)
+[![Tests](https://img.shields.io/badge/tests-79%20passing-brightgreen)](./tests)
+[![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen)](./labgraph)
 
 > **I'm actively rebuilding this project.** It started as **docRAG**, a
 > single-source RAG app (upload PDFs/TXT/MD, ask questions with citations).
@@ -65,6 +65,41 @@ at query time, and returns both the answer and the path.
   specific reason for each failure.
 - **Tests** — 32 unit + integration tests, 93% coverage on `evals/`.
 
+### New: labgraph — the typed knowledge graph (Week 2)
+
+The pure-Python core of the LabGraph pipeline. Ships without any LLM
+dependency so CI can exercise the full extract → build → traverse → persist
+loop on every push.
+
+- **`labgraph/schema.py`** — the 5-entity / 6-relation contract from the
+  design doc, encoded as `EntityKind` and `RelationKind` enums plus frozen
+  `Entity` and `Relation` dataclasses. `canonical_id(kind, name)` gives every
+  node a stable, slugged identifier.
+- **`labgraph/aliases.py`** — `AliasResolver` reads
+  `labgraph/aliases.yaml` and collapses surface forms ("Alex Liu",
+  "A. Liu", "aliu@duke.edu") to one canonical id per kind. Aggressive
+  normalization (case, punctuation, whitespace) so a Google Doc that misspells
+  a name still lands on the right node.
+- **`labgraph/graph.py`** — `LabGraph` wraps `networkx.MultiDiGraph` so
+  multiple relation kinds can coexist between the same pair. Exposes
+  `add_entity` (idempotent merge — re-ingesting grows the alias set instead
+  of duplicating), `add_relation`, `neighbors`, `neighborhood`, and
+  `shortest_path` for depth-bounded multi-hop lookup.
+- **`labgraph/extract.py`** — `Extractor` protocol with two implementations:
+  a **`RegexExtractor`** (deterministic, dependency-free — used by tests and
+  CI so no OpenAI credits are burned per run) and an **`OpenAIExtractor`**
+  stub that lands as a real structured-outputs call in the next slice.
+  `extract_many` batches chunks and dedupes entities.
+- **`labgraph/storage.py`** — `save_graph` / `load_graph` persist the graph
+  to a dedicated SQLite file (`labgraph_entities` + `labgraph_relations`
+  tables with the right indexes). Round-trip preserves aliases, attrs, and
+  provenance chunk IDs.
+- **Verified end-to-end:** extract two chunks (a paper + a meeting note) →
+  build graph → resolve
+  `person:alex-liu → paper:training-stability-2024 → method:curriculum-learning → decision:march-team-sync`
+  as a real multi-hop path.
+- **47 new tests, 95% coverage on `labgraph/`.**
+
 ### New: continuous integration
 
 - **`.github/workflows/ci.yml`** — the workflow that keeps the eval story
@@ -90,9 +125,12 @@ at query time, and returns both the answer and the path.
 ## Roadmap
 
 - [x] **Week 1 — Eval harness.** Scoring infrastructure before any KG code.
-- [ ] **Week 2 — Extraction + KG builder.** Fixed 5-entity, 6-relation schema.
-      LLM extraction with structured outputs. NetworkX in memory, persisted to
-      SQLite.
+- [x] **Week 2 — Extraction + KG builder.** Fixed 5-entity, 6-relation schema.
+      NetworkX in memory, persisted to SQLite. Deterministic regex extractor
+      for CI; OpenAI structured-outputs extractor to follow.
+- [ ] **Week 2b — OpenAI extractor.** Replace the regex baseline with a
+      structured-outputs LLM call per chunk. Same `Extractor` protocol, no
+      pipeline changes downstream.
 - [ ] **Week 3 — Google Drive ingestion.** OAuth flow, Docs → chunks → graph.
 - [ ] **Week 4 — Graph-aware retrieval.** Hybrid vector seed + bounded BFS
       along typed edges. First real eval score against the KG.
@@ -175,13 +213,21 @@ evals/              — eval harness (shipped, Week 1)
   scorer.py         deterministic pass/fail scorer
   runner.py         CLI entry point
   report.py         Markdown + JSON reports
-tests/              — 32 tests, 93% coverage on evals/
+labgraph/           — typed knowledge graph (shipped, Week 2)
+  schema.py         Entity / Relation / EntityKind / RelationKind
+  aliases.py        AliasResolver + YAML loader
+  aliases.yaml      alias declarations (starter file)
+  graph.py          NetworkX MultiDiGraph wrapper + multi-hop traversal
+  extract.py        Extractor protocol + RegexExtractor + OpenAIExtractor stub
+  storage.py        SQLite persistence (save_graph / load_graph)
+tests/              — 79 tests, 95% combined coverage
 .github/workflows/
   ci.yml            — pytest + eval schema validation on push/PR
 ```
 
-Not yet built (Weeks 2–6): `labgraph/extract.py`, `labgraph/graph.py`,
-`labgraph/retrieve.py`, `labgraph/sut.py`, and a Google Drive ingestion adapter.
+Not yet built (Weeks 2b–6): OpenAI extractor implementation, Google Drive
+ingestion adapter, KG-aware retrieval + KG SUT, trace visualization, demo
+video, public corpus.
 
 ## API
 

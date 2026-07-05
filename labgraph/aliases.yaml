@@ -1,0 +1,35 @@
+# LabGraph alias file.
+#
+# Every entity kind can declare a list of canonical names plus surface aliases
+# that should collapse to the same graph node. Normalization is aggressive:
+# case, punctuation, whitespace all lowered and slugified before matching.
+#
+# REPLACE the placeholders below with real lab members, methods, projects, and
+# decisions from your corpus. The starter entries are illustrative only.
+
+person:
+  - canonical: Alex Liu
+    aliases:
+      - A. Liu
+      - aliu
+      - aliu@duke.edu
+
+method:
+  - canonical: curriculum learning
+    aliases:
+      - CL
+  - canonical: gradient clipping
+    aliases: []
+  - canonical: qLoRA
+    aliases:
+      - quantized LoRA
+      - Q-LoRA
+
+project:
+  - canonical: Project Atlas
+    aliases: []
+
+decision:
+  - canonical: March team sync
+    aliases:
+      - March all-hands
