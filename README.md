@@ -60,3 +60,21 @@ If you already built the app before this fix, use `docker compose build --no-cac
 - `GET /api/documents`
 - `POST /api/upload` with multipart field `files`
 - `POST /api/query` with JSON `{ "question": "...", "top_k": 6 }`
+
+## Eval harness
+
+Multi-hop questions are the specification. See `evals/README.md`.
+
+```bash
+# dry-run (no DB required)
+python -m evals.runner --questions evals/questions.yaml --sut null
+
+# score the current docrag baseline (populated DB required)
+python -m evals.runner --sut baseline --output-md evals/reports/latest.md
+
+# fail if pass rate drops below 75%
+python -m evals.runner --sut baseline --min-pass-rate 0.75
+
+# run unit + integration tests
+pytest --cov=evals
+```

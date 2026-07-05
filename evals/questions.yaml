@@ -1,0 +1,61 @@
+# docRAG multi-hop eval set
+#
+# REPLACE the example questions below with 20 hand-written multi-hop questions
+# over your real lab corpus (papers + Google Docs meeting notes). Each question
+# must require touching AT LEAST TWO distinct sources to answer.
+#
+# Rules (from the design doc):
+#   1. You must write these by hand. Do not use an LLM to generate them.
+#   2. Every question needs at least 2 expected_sources of different kinds.
+#   3. expected_entities are strings that MUST appear (case-insensitive) in the
+#      final answer text for the question to pass.
+#   4. min_distinct_sources defaults to 2 — the retrieved set must span that
+#      many distinct filenames.
+#
+# The three examples below are SYNTHETIC and only demonstrate the schema.
+# Delete them before you consider the eval set real.
+
+version: 1
+questions:
+  - id: example-001
+    question: "Which of our published methods came out of the March team sync about training instability?"
+    expected_entities:
+      - "curriculum learning"
+      - "gradient clipping"
+    expected_sources:
+      - paper: "training_stability_2024.pdf"
+      - meeting_note: "2024-03-14-team-sync.docx"
+    min_distinct_sources: 2
+    expected_path:
+      - "paper:training_stability_2024.pdf"
+      - "method:curriculum learning"
+      - "decided_in:2024-03-14-team-sync.docx"
+    tags: [multi-hop, papers-and-docs, EXAMPLE]
+    notes: |
+      SYNTHETIC EXAMPLE. Bridges a paper (formal record) with a meeting note
+      (informal decision trace). Replace with a real question from your lab.
+
+  - id: example-002
+    question: "When did we decide method Y wasn't working, and which paper eventually used method Z instead?"
+    expected_entities:
+      - "method Y"
+      - "method Z"
+    expected_sources:
+      - meeting_note: "2024-05-02-methods-review.docx"
+      - paper: "method_z_experiments.pdf"
+    min_distinct_sources: 2
+    tags: [decision-trace, EXAMPLE]
+    notes: |
+      SYNTHETIC EXAMPLE. Decision-trace variant of multi-hop. Replace.
+
+  - id: example-003
+    question: "Who has worked on qLoRA fine-tuning across our lab, and which paper cites their work?"
+    expected_entities:
+      - "qLoRA"
+    expected_sources:
+      - meeting_note: "onboarding-notes.docx"
+      - paper: "efficient_finetuning_survey.pdf"
+    min_distinct_sources: 2
+    tags: [who-knows-what, EXAMPLE]
+    notes: |
+      SYNTHETIC EXAMPLE. Person-centric multi-hop. Replace.
