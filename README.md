@@ -64,10 +64,28 @@ at query time, and returns both the answer and the path.
 - **Reports** — Markdown + JSON output showing per-question pass/fail and the
   specific reason for each failure.
 - **Tests** — 32 unit + integration tests, 93% coverage on `evals/`.
-- **GitHub Actions CI** — `.github/workflows/ci.yml` runs the test suite and
-  validates the eval question schema on every push and PR, across Python
-  3.11 and 3.12. Coverage floor enforced at 80%. Eval reports uploaded as
-  build artifacts.
+
+### New: continuous integration
+
+- **`.github/workflows/ci.yml`** — the workflow that keeps the eval story
+  honest. Runs on every push and pull request to `main`, across a Python
+  **3.11 + 3.12 matrix**, using pip cache keyed on `requirements.txt`.
+- **What it enforces:**
+  - `pytest --cov=evals --cov-fail-under=80` — hard-fails CI if coverage on
+    the eval package drops below 80%.
+  - `python -m evals.runner --sut null` — parses `evals/questions.yaml` end
+    to end, so a malformed question schema breaks the build instead of
+    silently rotting.
+  - Every eval run in CI uploads its Markdown + JSON reports to
+    `evals/reports/` as build artifacts (retained 14 days), so any PR that
+    changes the score leaves a downloadable trail.
+- **Why it's here at Week 1:** the design doc calls the eval harness the
+  résumé weapon. That's only true if the harness runs on every commit, not
+  just when I remember to invoke it. CI turns the eval set into an actual
+  gate.
+- **Current status:** the badge at the top of this README reflects the live
+  build on `main`. Green means the eval schema is valid, tests pass, and
+  coverage is above the floor.
 
 ## Roadmap
 
