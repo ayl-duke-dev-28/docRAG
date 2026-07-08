@@ -5,6 +5,8 @@ const docSearchEl = document.querySelector("#doc-search");
 const docTypeEl = document.querySelector("#doc-type");
 const docSortEl = document.querySelector("#doc-sort");
 const docCountEl = document.querySelector("#doc-count");
+const graphCountEl = document.querySelector("#graph-count");
+const refreshGraphEl = document.querySelector("#refresh-graph");
 const formEl = document.querySelector("#query-form");
 const questionEl = document.querySelector("#question");
 const messagesEl = document.querySelector("#messages");
@@ -99,6 +101,20 @@ async function loadDocuments() {
   renderDocuments();
 }
 
+async function loadLabgraphStats() {
+  const response = await fetch("/api/labgraph/stats");
+  if (!response.ok) {
+    graphCountEl.textContent = "Graph unavailable.";
+    return;
+  }
+  const stats = await response.json();
+  if (!stats.entities) {
+    graphCountEl.textContent = "No graph built yet.";
+    return;
+  }
+  graphCountEl.textContent = `${stats.entities} entities · ${stats.relations} relations`;
+}
+
 async function uploadFiles(files) {
   if (!files.length) return;
   const data = new FormData();
@@ -113,6 +129,7 @@ async function uploadFiles(files) {
   }).join("<br>");
   addMessage("assistant", `<p>${summary}</p>`);
   await loadDocuments();
+  await loadLabgraphStats();
 }
 
 async function updateDocument(documentId, filename) {
@@ -147,6 +164,28 @@ function renderSources(sources) {
   `;
 }
 
+function renderTrace(trace) {
+  if (!trace || !trace.found || !trace.trace.length) return "";
+  return `
+    <div class="graph-trace">
+      <strong>Graph trace</strong>
+      <div class="trace-row">
+        ${trace.trace.map((label) => `<span>${escapeHtml(label)}</span>`).join("<b>→</b>")}
+      </div>
+    </div>
+  `;
+}
+
+async function loadQueryTrace() {
+  const response = await fetch("/api/labgraph/query-trace", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ max_depth: 4 }),
+  });
+  if (!response.ok) return null;
+  return response.json();
+}
+
 async function ask(question) {
   addMessage("user", `<p>${escapeHtml(question)}</p>`);
   const pending = addMessage("assistant", "<p>Searching papers...</p>");
@@ -158,7 +197,8 @@ async function ask(question) {
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.detail || "Query failed.");
   modePill.textContent = payload.mode === "rag" ? "LLM RAG" : "Local retrieval";
-  pending.innerHTML = `<p>${escapeHtml(payload.answer)}</p>${renderSources(payload.sources)}`;
+  const trace = await loadQueryTrace();
+  pending.innerHTML = `<p>${escapeHtml(payload.answer)}</p>${renderTrace(trace)}${renderSources(payload.sources)}`;
 }
 
 inputEl.addEventListener("change", async (event) => {
@@ -172,6 +212,7 @@ inputEl.addEventListener("change", async (event) => {
 });
 
 refreshEl.addEventListener("click", loadDocuments);
+refreshGraphEl.addEventListener("click", loadLabgraphStats);
 docSearchEl.addEventListener("input", renderDocuments);
 docTypeEl.addEventListener("change", renderDocuments);
 docSortEl.addEventListener("change", renderDocuments);
@@ -221,3 +262,4 @@ formEl.addEventListener("submit", async (event) => {
 });
 
 loadDocuments();
+loadLabgraphStats();

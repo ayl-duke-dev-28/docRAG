@@ -23,6 +23,7 @@ load_dotenv(BASE_DIR / ".env")
 DATA_DIR = Path(os.getenv("DOCRAG_DATA_DIR", BASE_DIR / "data"))
 UPLOAD_DIR = DATA_DIR / "uploads"
 DB_PATH = DATA_DIR / "docrag.sqlite3"
+LABGRAPH_DB_PATH = Path(os.getenv("LABGRAPH_DB_PATH", DATA_DIR / "labgraph.sqlite3"))
 
 EMBEDDING_MODEL = os.getenv("DOCRAG_EMBEDDING_MODEL", "text-embedding-3-small")
 CHAT_MODEL = os.getenv("DOCRAG_CHAT_MODEL", "gpt-4o-mini")

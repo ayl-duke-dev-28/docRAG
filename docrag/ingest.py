@@ -6,9 +6,13 @@ from typing import Dict, List, Tuple
 
 from pypdf import PdfReader
 
-from .config import CHUNK_OVERLAP, CHUNK_WORDS, UPLOAD_DIR
+from labgraph.aliases import AliasResolver
+from labgraph.extract import Chunk, RegexExtractor, extract_many
+from labgraph.storage import load_graph, save_graph
+
+from .config import BASE_DIR, CHUNK_OVERLAP, CHUNK_WORDS, LABGRAPH_DB_PATH, UPLOAD_DIR
 from .llm import LLMError, embed_texts
-from .storage import add_chunks, create_document, document_by_hash
+from .storage import add_chunks, chunks_for_document, create_document, document_by_hash
 
 
 WHITESPACE_RE = re.compile(r"\s+")
@@ -99,6 +103,7 @@ def ingest_file(temp_path: Path, original_filename: str) -> Dict:
 
     document_id = create_document(original_filename, stored_path, content_hash, len(pages))
     add_chunks(document_id, original_filename, chunks)
+    update_labgraph_for_document(document_id)
 
     return {
         "status": "ingested",
@@ -106,3 +111,27 @@ def ingest_file(temp_path: Path, original_filename: str) -> Dict:
         "filename": original_filename,
         "chunks": len(chunks),
     }
+
+
+def update_labgraph_for_document(document_id: int) -> None:
+    rows = chunks_for_document(document_id)
+    if not rows:
+        return
+
+    alias_path = BASE_DIR / "labgraph" / "aliases.yaml"
+    aliases = AliasResolver.from_yaml(alias_path) if alias_path.exists() else AliasResolver()
+    extractor = RegexExtractor(aliases=aliases)
+    result = extract_many(
+        extractor,
+        [
+            Chunk(id=str(row["id"]), filename=row["filename"], text=row["text"])
+            for row in rows
+        ],
+    )
+
+    graph = load_graph(LABGRAPH_DB_PATH)
+    for entity in result.entities:
+        graph.add_entity(entity)
+    for relation in result.relations:
+        graph.add_relation(relation)
+    save_graph(graph, LABGRAPH_DB_PATH)

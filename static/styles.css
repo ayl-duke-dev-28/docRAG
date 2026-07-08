@@ -114,6 +114,23 @@ h2 {
   font-weight: 700;
 }
 
+.graph-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fbfa;
+  padding: 12px;
+}
+
+#refresh-graph {
+  flex: 0 0 auto;
+  background: #edf4f2;
+  color: #20524b;
+}
+
 .doc-header {
   display: flex;
   justify-content: space-between;
@@ -264,6 +281,41 @@ button:disabled {
   gap: 8px;
 }
 
+.graph-trace {
+  margin-top: 14px;
+  border: 1px solid #cfd9d5;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 10px;
+}
+
+.graph-trace strong {
+  display: block;
+  color: #20524b;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.trace-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.trace-row span {
+  border: 1px solid #d9e2df;
+  border-radius: 7px;
+  background: #f8fbfa;
+  padding: 5px 7px;
+  overflow-wrap: anywhere;
+}
+
+.trace-row b {
+  color: var(--muted);
+}
+
 .source {
   border-left: 3px solid var(--warm);
   padding-left: 10px;
@@ -338,5 +390,10 @@ select:focus {
 
   .doc-control-row {
     grid-template-columns: 1fr;
+  }
+
+  .graph-status {
+    align-items: stretch;
+    flex-direction: column;
   }
 }

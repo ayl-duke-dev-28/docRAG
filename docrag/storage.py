@@ -201,6 +201,20 @@ def get_chunk(chunk_id: int) -> Optional[sqlite3.Row]:
         ).fetchone()
 
 
+def chunks_for_document(document_id: int) -> List[sqlite3.Row]:
+    with connect() as conn:
+        return conn.execute(
+            """
+            SELECT c.id, c.text, d.filename
+            FROM chunks c
+            JOIN documents d ON d.id = c.document_id
+            WHERE c.document_id = ?
+            ORDER BY c.chunk_index
+            """,
+            (document_id,),
+        ).fetchall()
+
+
 def all_embedded_chunks() -> List[sqlite3.Row]:
     with connect() as conn:
         return conn.execute(
