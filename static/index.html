@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>docRAG</title>
+    <title>LabGraph</title>
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body>
@@ -11,8 +11,8 @@
       <section class="panel library">
         <div class="brand">
           <div>
-            <h1>docRAG</h1>
-            <p>Upload papers, index them, and ask research questions with source-backed answers.</p>
+            <h1>LabGraph</h1>
+            <p>Ask research questions across papers and meeting notes. Inspect the graph path behind each answer.</p>
           </div>
           <span id="mode-pill">Local retrieval</span>
         </div>
@@ -63,11 +63,11 @@
         <div id="messages" class="messages">
           <div class="message assistant">
             <strong>Ready.</strong>
-            <p>Upload research papers, then ask a precise question. Answers include citations to retrieved chunks.</p>
+            <p>Ask a question that needs more than one source. Answers include citations and a graph trace when LabGraph finds a path.</p>
           </div>
         </div>
         <form id="query-form" class="query-form">
-          <textarea id="question" placeholder="Ask a question about your papers..." rows="3"></textarea>
+          <textarea id="question" placeholder="Ask a multi-hop question across your lab corpus..." rows="3"></textarea>
           <button type="submit">Ask</button>
         </form>
       </section>
