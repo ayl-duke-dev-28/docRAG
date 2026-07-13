@@ -98,6 +98,19 @@ loop on every push.
   section below shows the runnable snippet and its actual output.
 - **47 new tests, 95% coverage on `labgraph/`.**
 
+### New: LabGraph UI foundation
+
+- **Visible app chrome now says LabGraph** — the browser title, first-screen
+  heading, opening assistant message, and query placeholder now frame the app
+  around multi-hop lab questions and graph traces instead of the legacy docRAG
+  upload-and-chat flow.
+- **Design source of truth** — `DESIGN.md` now specifies the product promise,
+  visual system, trace component requirements, empty/loading/error states,
+  accessibility rules, and implementation order for the LabGraph UI.
+- **Next UI slice** — replace the current inline trace row with a proper graph
+  trace component that shows entity kinds, relation labels, and no-path/error
+  states.
+
 ### New: continuous integration
 
 - **`.github/workflows/ci.yml`** — the workflow that keeps the eval story
@@ -133,7 +146,8 @@ loop on every push.
 - [ ] **Week 4 — Graph-aware retrieval.** Hybrid vector seed + bounded BFS
       along typed edges. First real eval score against the KG.
 - [ ] **Week 5 — Prompt + retrieval iteration** until eval hits **≥ 15 / 20**.
-      Trace visualization in the UI.
+      Trace visualization in the UI. The first LabGraph chrome pass is shipped;
+      the next UI slice is a richer graph trace component.
 - [ ] **Week 6 — Demo video + reproducible public corpus + release.**
 
 ## Quick start

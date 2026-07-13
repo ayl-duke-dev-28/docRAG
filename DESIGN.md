@@ -382,19 +382,26 @@ Required:
 
 ## Implementation Priorities
 
+### Completed UI Foundation
+
+Completed:
+
+1. Rename visible app chrome from `docRAG` to `LabGraph`.
+2. Update the first-screen subtitle to frame the app around research questions, meeting notes, and graph paths.
+3. Update the initial assistant message and query placeholder to point users toward multi-hop questions.
+
 ### Next UI Slice
 
 Build the LabGraph answer experience before broadening ingestion.
 
 Required changes:
 
-1. Rename visible app chrome from `docRAG` to `LabGraph`.
-2. Replace the current inline trace row with a proper graph trace component.
-3. Show relation labels between nodes.
-4. Show entity kinds on nodes.
-5. Add designed states for no graph, no path, partial path, and graph error.
-6. Tie sources to graph nodes or relations when provenance data exists.
-7. Update empty and loading states to match this spec.
+1. Replace the current inline trace row with a proper graph trace component.
+2. Show relation labels between nodes.
+3. Show entity kinds on nodes.
+4. Add designed states for no graph, no path, partial path, and graph error.
+5. Tie sources to graph nodes or relations when provenance data exists.
+6. Update empty and loading states to match this spec.
 
 ### After That
 
