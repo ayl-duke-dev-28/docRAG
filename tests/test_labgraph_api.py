@@ -149,6 +149,29 @@ def test_labgraph_query_trace_endpoint_returns_readable_path(
             "name": "March team sync",
         },
     ]
+    assert payload["relations"] == [
+        {
+            "source_id": "person:alex-liu",
+            "target_id": "paper:training-stability-2024",
+            "kind": "authored",
+            "provenance": ["1"],
+            "attrs": {},
+        },
+        {
+            "source_id": "paper:training-stability-2024",
+            "target_id": "method:curriculum-learning",
+            "kind": "uses_method",
+            "provenance": ["1"],
+            "attrs": {},
+        },
+        {
+            "source_id": "method:curriculum-learning",
+            "target_id": "decision:march-team-sync",
+            "kind": "decided_in",
+            "provenance": ["2"],
+            "attrs": {},
+        },
+    ]
 
 
 @pytest.mark.integration

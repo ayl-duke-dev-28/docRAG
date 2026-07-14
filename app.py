@@ -87,16 +87,32 @@ def compact_entity(entity: Entity) -> Dict:
     }
 
 
+def compact_relation(relation) -> Dict:
+    return {
+        "source_id": relation.source_id,
+        "target_id": relation.target_id,
+        "kind": relation.kind.value,
+        "provenance": list(relation.provenance),
+        "attrs": relation.as_attrs_dict(),
+    }
+
+
 def graph_trace_response(graph: LabGraph, path: List[str]) -> Dict:
     entities = [graph.get_entity(entity_id) for entity_id in path]
     if not path or any(entity is None for entity in entities):
-        return {"found": False, "trace": [], "path": []}
+        return {"found": False, "trace": [], "path": [], "relations": []}
 
     compact_path = [compact_entity(entity) for entity in entities if entity is not None]
+    relations = []
+    for source_id, target_id in zip(path, path[1:]):
+        between = graph.relations_between(source_id, target_id)
+        if between:
+            relations.append(compact_relation(between[0]))
     return {
         "found": True,
         "trace": [entity["name"] for entity in compact_path],
         "path": compact_path,
+        "relations": relations,
     }
 
 

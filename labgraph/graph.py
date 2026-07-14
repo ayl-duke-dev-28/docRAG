@@ -73,6 +73,22 @@ class LabGraph:
             if kind is None or relation.kind == kind:
                 yield relation
 
+    def relations_between(
+        self,
+        source_id: str,
+        target_id: str,
+        kind: Optional[RelationKind] = None,
+    ) -> List[Relation]:
+        if source_id not in self._graph or target_id not in self._graph:
+            return []
+        edge_data = self._graph.get_edge_data(source_id, target_id, default={})
+        result: List[Relation] = []
+        for data in edge_data.values():
+            relation: Relation = data["relation"]
+            if kind is None or relation.kind == kind:
+                result.append(relation)
+        return result
+
     def neighbors(
         self, entity_id: str, kind: Optional[RelationKind] = None
     ) -> List[Tuple[Relation, Entity]]:

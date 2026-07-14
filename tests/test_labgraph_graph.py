@@ -126,6 +126,19 @@ def test_relations_filter_by_kind():
 
 
 @pytest.mark.unit
+def test_relations_between_returns_directed_edge_relations():
+    g = _small_graph()
+
+    relations = g.relations_between(
+        "person:alex-liu",
+        "paper:training-stability-2024",
+    )
+
+    assert [relation.kind for relation in relations] == [RelationKind.AUTHORED]
+    assert g.relations_between("paper:training-stability-2024", "person:alex-liu") == []
+
+
+@pytest.mark.unit
 def test_shortest_path_finds_multi_hop_route():
     g = _small_graph()
     path = g.shortest_path("person:alex-liu", "decision:march-team-sync", max_depth=4)

@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/ayl-duke-dev-28/docRAG/actions/workflows/ci.yml/badge.svg)](https://github.com/ayl-duke-dev-28/docRAG/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-82%20passing-brightgreen)](./tests)
+[![Tests](https://img.shields.io/badge/tests-83%20passing-brightgreen)](./tests)
 [![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen)](./labgraph)
 
 > **LabGraph is the current product direction.** It started as **docRAG**, a
@@ -115,8 +115,11 @@ loop on every push.
 - **Trace component foundation** — the answer view now renders graph paths as a
   dedicated ordered trace component with a header, numbered nodes, stacked path
   layout, and visual connectors instead of a thin inline arrow row.
-- **Next UI slice** — enrich the trace data and UI with relation labels, entity
-  kinds, and no-path/error states.
+- **Trace relation labels** — `/api/labgraph/query-trace` now returns relation
+  metadata between path nodes, and the answer trace renders those relation
+  labels as connector chips.
+- **Next UI slice** — show entity kinds on trace nodes, then add no-path/error
+  states.
 
 ### New: continuous integration
 
@@ -154,7 +157,7 @@ loop on every push.
       along typed edges. First real eval score against the KG.
 - [ ] **Week 5 — Prompt + retrieval iteration** until eval hits **≥ 15 / 20**.
       Trace visualization in the UI. The first LabGraph chrome pass is shipped;
-      the trace component foundation is shipped; next is relation labels and
+      the trace component foundation and relation labels are shipped; next is
       entity kinds.
 - [ ] **Week 6 — Demo video + reproducible public corpus + release.**
 
@@ -283,7 +286,7 @@ labgraph/           — typed knowledge graph (shipped, Week 2)
   graph.py          NetworkX MultiDiGraph wrapper + multi-hop traversal
   extract.py        Extractor protocol + RegexExtractor + OpenAIExtractor stub
   storage.py        SQLite persistence (save_graph / load_graph)
-tests/              — 82 tests, 95% combined coverage
+tests/              — 83 tests, 95% combined coverage
 .github/workflows/
   ci.yml            — pytest + eval schema validation on push/PR
 ```

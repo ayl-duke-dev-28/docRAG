@@ -351,11 +351,32 @@ button:disabled {
   font-weight: 700;
 }
 
-.trace-connector {
-  width: 2px;
-  min-height: 14px;
+.trace-edge {
+  display: grid;
+  grid-template-columns: 2px auto;
+  align-items: center;
+  column-gap: 10px;
+  min-height: 28px;
   margin-left: 19px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.trace-edge::before {
+  content: "";
+  display: block;
+  width: 2px;
+  min-height: 28px;
   background: #cfd9d5;
+}
+
+.trace-edge span {
+  justify-self: start;
+  border: 1px solid #d9e2df;
+  border-radius: 999px;
+  background: #ffffff;
+  padding: 4px 8px;
 }
 
 .source {

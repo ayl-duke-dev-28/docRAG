@@ -166,20 +166,28 @@ function renderSources(sources) {
 
 function renderTrace(trace) {
   if (!trace || !trace.found || !trace.trace.length) return "";
-  const steps = trace.trace.map((label, index) => `
+  const nodes = trace.path && trace.path.length
+    ? trace.path
+    : trace.trace.map((label) => ({ name: label }));
+  const relationLabel = (relation) => relation ? relation.kind.replaceAll("_", " ") : "related to";
+  const steps = nodes.map((node, index) => `
     <li class="trace-step">
       <div class="trace-node">
         <span class="trace-index">${index + 1}</span>
-        <span class="trace-label">${escapeHtml(label)}</span>
+        <span class="trace-label">${escapeHtml(node.name)}</span>
       </div>
-      ${index < trace.trace.length - 1 ? '<div class="trace-connector" aria-hidden="true"></div>' : ""}
+      ${index < nodes.length - 1 ? `
+        <div class="trace-edge">
+          <span>${escapeHtml(relationLabel(trace.relations && trace.relations[index]))}</span>
+        </div>
+      ` : ""}
     </li>
   `).join("");
   return `
     <div class="graph-trace">
       <div class="trace-header">
         <strong>Graph trace</strong>
-        <span>${trace.trace.length} nodes</span>
+        <span>${nodes.length} nodes</span>
       </div>
       <ol class="trace-path" aria-label="Graph traversal path">
         ${steps}
