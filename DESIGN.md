@@ -391,6 +391,7 @@ Completed:
 3. Update the initial assistant message and query placeholder to point users toward multi-hop questions.
 4. Rename runtime-facing metadata and operational labels to `LabGraph`, including FastAPI title, Docker Compose service, smoke-test output, eval harness copy, and `.env.example` variables.
 5. Keep old `DOCRAG_*` config names as backward-compatible fallbacks while making `LABGRAPH_*` the documented path.
+6. Replace the current inline trace row with a dedicated ordered graph trace component with a header, numbered nodes, stacked layout, and visual connectors.
 
 ### Next UI Slice
 
@@ -398,12 +399,11 @@ Build the LabGraph answer experience before broadening ingestion.
 
 Required changes:
 
-1. Replace the current inline trace row with a proper graph trace component.
-2. Show relation labels between nodes.
-3. Show entity kinds on nodes.
-4. Add designed states for no graph, no path, partial path, and graph error.
-5. Tie sources to graph nodes or relations when provenance data exists.
-6. Update empty and loading states to match this spec.
+1. Show relation labels between nodes.
+2. Show entity kinds on nodes.
+3. Add designed states for no graph, no path, partial path, and graph error.
+4. Tie sources to graph nodes or relations when provenance data exists.
+5. Update empty and loading states to match this spec.
 
 ### After That
 

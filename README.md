@@ -112,9 +112,11 @@ loop on every push.
 - **Design source of truth** — `DESIGN.md` now specifies the product promise,
   visual system, trace component requirements, empty/loading/error states,
   accessibility rules, and implementation order for the LabGraph UI.
-- **Next UI slice** — replace the current inline trace row with a proper graph
-  trace component that shows entity kinds, relation labels, and no-path/error
-  states.
+- **Trace component foundation** — the answer view now renders graph paths as a
+  dedicated ordered trace component with a header, numbered nodes, stacked path
+  layout, and visual connectors instead of a thin inline arrow row.
+- **Next UI slice** — enrich the trace data and UI with relation labels, entity
+  kinds, and no-path/error states.
 
 ### New: continuous integration
 
@@ -152,7 +154,8 @@ loop on every push.
       along typed edges. First real eval score against the KG.
 - [ ] **Week 5 — Prompt + retrieval iteration** until eval hits **≥ 15 / 20**.
       Trace visualization in the UI. The first LabGraph chrome pass is shipped;
-      the next UI slice is a richer graph trace component.
+      the trace component foundation is shipped; next is relation labels and
+      entity kinds.
 - [ ] **Week 6 — Demo video + reproducible public corpus + release.**
 
 ## Quick start
