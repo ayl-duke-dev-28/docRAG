@@ -56,8 +56,8 @@ at query time, and returns both the answer and the path.
   every expected source appears in the retrieved set, and the retrieved set
   spans ≥ `min_distinct_sources` distinct filenames. No LLM judge.
 - **Pluggable System Under Test** — `evals/sut.py` declares a `SystemUnderTest`
-  protocol. `NullSUT` for dry-runs, `DocragBaselineSUT` wraps the current
-  retrieval. The KG SUT plugs in later with zero harness changes.
+  protocol. `NullSUT` for dry-runs, `LabGraphBaselineSUT` wraps the current
+  legacy retrieval path. The KG SUT plugs in later with zero harness changes.
 - **CLI runner** — `python -m evals.runner` with `--sut`, `--output-md`,
   `--output-json`, `--min-pass-rate` (returns exit 1 in CI when the score
   drops).
@@ -100,10 +100,15 @@ loop on every push.
 
 ### New: LabGraph UI foundation
 
-- **Visible app chrome now says LabGraph** — the browser title, first-screen
-  heading, opening assistant message, and query placeholder now frame the app
-  around multi-hop lab questions and graph traces instead of the legacy docRAG
-  upload-and-chat flow.
+- **Runtime identity now says LabGraph** — the FastAPI title, browser title,
+  Docker Compose service, smoke-test output, first-screen heading, opening
+  assistant message, and query placeholder now frame the app around multi-hop
+  lab questions and graph traces instead of the legacy docRAG upload-and-chat
+  flow.
+- **Environment variables moved to `LABGRAPH_*`** — `.env.example`, Dockerfile,
+  and Compose now use `LABGRAPH_DATA_DIR`, `LABGRAPH_EMBEDDING_MODEL`, and
+  `LABGRAPH_CHAT_MODEL`. The app still accepts the old `DOCRAG_*` names as
+  backward-compatible fallbacks.
 - **Design source of truth** — `DESIGN.md` now specifies the product promise,
   visual system, trace component requirements, empty/loading/error states,
   accessibility rules, and implementation order for the LabGraph UI.
@@ -258,7 +263,7 @@ app.py              FastAPI app + HTML shell
 docrag/             — baseline single-source RAG (shipped)
   config.py         paths and constants
   ingest.py         PDF/TXT/MD → chunks
-  storage.py        SQLite + FTS5 index
+  storage.py        SQLite + FTS5 index (`data/docrag.sqlite3` legacy filename)
   retrieval.py      hybrid vector + BM25 retrieval (baseline SUT)
   llm.py            OpenAI embeddings + chat wrapper
 evals/              — eval harness (shipped, Week 1)

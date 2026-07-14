@@ -70,7 +70,7 @@ The first desktop viewport must communicate four things without scrolling:
 
 The product name in the UI is `LabGraph`.
 
-`docRAG` may appear only as legacy or baseline context in technical docs. The user-facing app chrome should not lead with `docRAG` after the LabGraph UI work begins.
+`docRAG` may appear only as legacy or baseline context in technical docs, import paths, backward-compatible config aliases, and the current legacy SQLite filename. The user-facing app chrome, FastAPI metadata, Docker service, smoke-test output, and new environment variables should lead with `LabGraph`.
 
 Recommended title treatment:
 
@@ -389,6 +389,8 @@ Completed:
 1. Rename visible app chrome from `docRAG` to `LabGraph`.
 2. Update the first-screen subtitle to frame the app around research questions, meeting notes, and graph paths.
 3. Update the initial assistant message and query placeholder to point users toward multi-hop questions.
+4. Rename runtime-facing metadata and operational labels to `LabGraph`, including FastAPI title, Docker Compose service, smoke-test output, eval harness copy, and `.env.example` variables.
+5. Keep old `DOCRAG_*` config names as backward-compatible fallbacks while making `LABGRAPH_*` the documented path.
 
 ### Next UI Slice
 
