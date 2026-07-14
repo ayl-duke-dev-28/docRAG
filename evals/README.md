@@ -1,4 +1,4 @@
-# docRAG eval harness
+# LabGraph eval harness
 
 The eval harness is the résumé weapon. It runs *before* the KG code exists so
 every subsequent change is scored against the same fixed corpus of multi-hop
@@ -37,7 +37,7 @@ Rules from the design doc, worth restating:
 # dry-run: parse questions, score them against a null SUT (all fail — sanity check)
 python -m evals.runner --questions evals/questions.yaml --sut null
 
-# run against the current docrag baseline (needs a populated SQLite DB)
+# run against the current LabGraph legacy retrieval baseline (needs a populated SQLite DB)
 python -m evals.runner --sut baseline --output-md evals/reports/latest.md
 
 # fail CI when the pass rate drops

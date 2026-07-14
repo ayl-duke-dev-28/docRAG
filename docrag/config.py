@@ -20,18 +20,24 @@ def load_dotenv(path: Path) -> None:
 
 load_dotenv(BASE_DIR / ".env")
 
-DATA_DIR = Path(os.getenv("DOCRAG_DATA_DIR", BASE_DIR / "data"))
+DATA_DIR = Path(os.getenv("LABGRAPH_DATA_DIR", os.getenv("DOCRAG_DATA_DIR", BASE_DIR / "data")))
 UPLOAD_DIR = DATA_DIR / "uploads"
 DB_PATH = DATA_DIR / "docrag.sqlite3"
 LABGRAPH_DB_PATH = Path(os.getenv("LABGRAPH_DB_PATH", DATA_DIR / "labgraph.sqlite3"))
 
-EMBEDDING_MODEL = os.getenv("DOCRAG_EMBEDDING_MODEL", "text-embedding-3-small")
-CHAT_MODEL = os.getenv("DOCRAG_CHAT_MODEL", "gpt-4o-mini")
+EMBEDDING_MODEL = os.getenv(
+    "LABGRAPH_EMBEDDING_MODEL",
+    os.getenv("DOCRAG_EMBEDDING_MODEL", "text-embedding-3-small"),
+)
+CHAT_MODEL = os.getenv(
+    "LABGRAPH_CHAT_MODEL",
+    os.getenv("DOCRAG_CHAT_MODEL", "gpt-4o-mini"),
+)
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 
-CHUNK_WORDS = int(os.getenv("DOCRAG_CHUNK_WORDS", "420"))
-CHUNK_OVERLAP = int(os.getenv("DOCRAG_CHUNK_OVERLAP", "70"))
-TOP_K = int(os.getenv("DOCRAG_TOP_K", "6"))
+CHUNK_WORDS = int(os.getenv("LABGRAPH_CHUNK_WORDS", os.getenv("DOCRAG_CHUNK_WORDS", "420")))
+CHUNK_OVERLAP = int(os.getenv("LABGRAPH_CHUNK_OVERLAP", os.getenv("DOCRAG_CHUNK_OVERLAP", "70")))
+TOP_K = int(os.getenv("LABGRAPH_TOP_K", os.getenv("DOCRAG_TOP_K", "6")))
 
 
 def ensure_dirs():

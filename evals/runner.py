@@ -35,7 +35,7 @@ def run_eval(
 def _parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="evals.runner",
-        description="Run the docRAG eval harness against a System Under Test.",
+        description="Run the LabGraph eval harness against a System Under Test.",
     )
     parser.add_argument(
         "--questions",
@@ -46,7 +46,7 @@ def _parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument(
         "--sut",
         default="null",
-        help="Name of the System Under Test: 'null' (dry-run) or 'baseline' (docrag).",
+        help="Name of the System Under Test: 'null' (dry-run) or 'baseline' (LabGraph legacy retrieval).",
     )
     parser.add_argument(
         "--output-md",

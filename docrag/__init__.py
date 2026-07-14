@@ -1,2 +1,1 @@
-"""docRAG: fast local paper ingestion and retrieval."""
-
+"""Legacy baseline retrieval package used by LabGraph."""

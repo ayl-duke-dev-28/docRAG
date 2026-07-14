@@ -30,7 +30,7 @@ def main():
     payload = post("/api/query", {"question": "What papers are indexed?", "top_k": 3})
     assert "answer" in payload, payload
     assert "sources" in payload, payload
-    print("docRAG smoke test passed.")
+    print("LabGraph smoke test passed.")
 
 
 if __name__ == "__main__":

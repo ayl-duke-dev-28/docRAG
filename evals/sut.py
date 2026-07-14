@@ -16,16 +16,16 @@ class NullSUT:
         return Answer(text="", sources=())
 
 
-class DocragBaselineSUT:
-    name = "docrag-baseline"
+class LabGraphBaselineSUT:
+    name = "labgraph-baseline"
 
     def __init__(self, top_k: int = 5) -> None:
         self.top_k = top_k
 
     def run(self, question: str) -> Answer:
-        from docrag.retrieval import answer as docrag_answer
+        from docrag.retrieval import answer as labgraph_answer
 
-        response = docrag_answer(question, top_k=self.top_k)
+        response = labgraph_answer(question, top_k=self.top_k)
         sources = tuple(
             source.get("filename", "")
             for source in response.get("sources", [])
@@ -38,6 +38,6 @@ def get_sut(name: str) -> SystemUnderTest:
     normalized = name.strip().lower()
     if normalized in {"null", "none", "dry-run"}:
         return NullSUT()
-    if normalized in {"baseline", "docrag", "docrag-baseline"}:
-        return DocragBaselineSUT()
+    if normalized in {"baseline", "labgraph", "labgraph-baseline", "docrag", "docrag-baseline"}:
+        return LabGraphBaselineSUT()
     raise ValueError(f"Unknown SUT name: {name!r}. Try 'null' or 'baseline'.")

@@ -1,6 +1,6 @@
 # labgraph — the typed knowledge graph
 
-The KG that turns docRAG's single-source retrieval into multi-hop reasoning.
+The KG that turns LabGraph's legacy single-source retrieval into multi-hop reasoning.
 
 ## Model
 

@@ -1,15 +1,15 @@
-# docRAG → LabGraph (work in progress)
+# LabGraph (formerly docRAG)
 
 [![CI](https://github.com/ayl-duke-dev-28/docRAG/actions/workflows/ci.yml/badge.svg)](https://github.com/ayl-duke-dev-28/docRAG/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-79%20passing-brightgreen)](./tests)
+[![Tests](https://img.shields.io/badge/tests-82%20passing-brightgreen)](./tests)
 [![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen)](./labgraph)
 
-> **I'm actively rebuilding this project.** It started as **docRAG**, a
-> single-source RAG app (upload PDFs/TXT/MD, ask questions with citations).
-> I'm turning it into **LabGraph**, a multi-source knowledge-graph RAG bot
-> for research labs that can answer multi-hop questions across papers and
-> Google Docs meeting notes. This README tracks what's shipped and what's next.
+> **LabGraph is the current product direction.** It started as **docRAG**, a
+> single-source RAG app (upload PDFs/TXT/MD, ask questions with citations), and
+> is now becoming a multi-source knowledge-graph RAG bot for research labs that
+> can answer multi-hop questions across papers and Google Docs meeting notes.
+> This README tracks what's shipped and what's next.
 
 **Target:** answer questions like *"Which of our published methods came out of
 the March team sync?"* with an answer AND a visible graph-traversal trace
@@ -30,7 +30,7 @@ at query time, and returns both the answer and the path.
 
 ## What's shipped so far
 
-### Baseline docRAG (the starting point I'm building on)
+### Legacy retrieval baseline (formerly docRAG)
 
 - **FastAPI web app** — upload PDFs / TXT / Markdown at `http://127.0.0.1:8000`.
 - **Ingestion pipeline** — `docrag/ingest.py` chunks documents by page with
@@ -177,7 +177,7 @@ scripts\start.bat
 
 ### LLM mode (optional)
 
-Without an API key, docRAG uses SQLite full-text search and returns the most
+Without an API key, LabGraph uses SQLite full-text search and returns the most
 relevant passages directly. For synthesized answers and semantic embeddings,
 edit `.env`:
 
@@ -198,7 +198,7 @@ schema and rules.
 # dry-run: parse questions, score against a null SUT (all fail — sanity check)
 python -m evals.runner --questions evals/questions.yaml --sut null
 
-# score the current docrag baseline (needs a populated SQLite DB)
+# score the current LabGraph legacy retrieval baseline (needs a populated SQLite DB)
 python -m evals.runner --sut baseline --output-md evals/reports/latest.md
 
 # CI: fail when pass rate drops below 75%
@@ -275,7 +275,7 @@ labgraph/           — typed knowledge graph (shipped, Week 2)
   graph.py          NetworkX MultiDiGraph wrapper + multi-hop traversal
   extract.py        Extractor protocol + RegexExtractor + OpenAIExtractor stub
   storage.py        SQLite persistence (save_graph / load_graph)
-tests/              — 79 tests, 95% combined coverage
+tests/              — 82 tests, 95% combined coverage
 .github/workflows/
   ci.yml            — pytest + eval schema validation on push/PR
 ```

@@ -1,14 +1,14 @@
 services:
-  docrag:
+  labgraph:
     build: .
     ports:
       - "8000:8000"
     env_file:
       - .env
     environment:
-      DOCRAG_EMBEDDING_MODEL: ${DOCRAG_EMBEDDING_MODEL:-text-embedding-3-small}
-      DOCRAG_CHAT_MODEL: ${DOCRAG_CHAT_MODEL:-gpt-4o-mini}
-      DOCRAG_DATA_DIR: /app/data
+      LABGRAPH_EMBEDDING_MODEL: ${LABGRAPH_EMBEDDING_MODEL:-text-embedding-3-small}
+      LABGRAPH_CHAT_MODEL: ${LABGRAPH_CHAT_MODEL:-gpt-4o-mini}
+      LABGRAPH_DATA_DIR: /app/data
     volumes:
       - ./data:/app/data
     restart: unless-stopped

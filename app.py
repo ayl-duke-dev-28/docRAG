@@ -16,7 +16,7 @@ from labgraph.schema import Entity, EntityKind
 from labgraph.storage import load_graph
 
 
-app = FastAPI(title="docRAG", version="0.1.0")
+app = FastAPI(title="LabGraph", version="0.1.0")
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
 
