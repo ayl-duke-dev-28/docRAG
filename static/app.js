@@ -166,12 +166,24 @@ function renderSources(sources) {
 
 function renderTrace(trace) {
   if (!trace || !trace.found || !trace.trace.length) return "";
+  const steps = trace.trace.map((label, index) => `
+    <li class="trace-step">
+      <div class="trace-node">
+        <span class="trace-index">${index + 1}</span>
+        <span class="trace-label">${escapeHtml(label)}</span>
+      </div>
+      ${index < trace.trace.length - 1 ? '<div class="trace-connector" aria-hidden="true"></div>' : ""}
+    </li>
+  `).join("");
   return `
     <div class="graph-trace">
-      <strong>Graph trace</strong>
-      <div class="trace-row">
-        ${trace.trace.map((label) => `<span>${escapeHtml(label)}</span>`).join("<b>→</b>")}
+      <div class="trace-header">
+        <strong>Graph trace</strong>
+        <span>${trace.trace.length} nodes</span>
       </div>
+      <ol class="trace-path" aria-label="Graph traversal path">
+        ${steps}
+      </ol>
     </div>
   `;
 }
