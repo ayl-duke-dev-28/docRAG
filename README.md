@@ -118,6 +118,9 @@ loop on every push.
 - **Trace relation labels** — `/api/labgraph/query-trace` now returns relation
   metadata between path nodes, and the answer trace renders those relation
   labels as connector chips.
+- **Trace entity-kind chips** — trace nodes now show their entity kind
+  (`Person`, `Project`, `Method`, `Paper`, or `Decision`) beside the node name,
+  using the LabGraph entity palette so paths are easier to scan.
 - **The trace is derived from the question** — `/api/query` resolves the
   entities named in the question against the graph, walks between them, and
   returns the trace alongside the answer. Previously the UI fetched a trace in
@@ -132,8 +135,8 @@ loop on every push.
   `no_graph`, `no_entities` (nothing in the question matched), `partial` (one
   entity named — shows its neighborhood), `no_path` (names the endpoints
   searched and the depth), and `error` (preserves the answer and sources).
-- **Next UI slice** — show entity kinds on trace nodes, then tie sources to
-  graph nodes.
+- **Next UI slice** — tie sources to graph nodes or relations when provenance
+  data exists.
 
 ### New: continuous integration
 
@@ -171,9 +174,9 @@ loop on every push.
       along typed edges. First real eval score against the KG.
 - [ ] **Week 5 — Prompt + retrieval iteration** until eval hits **≥ 15 / 20**.
       Trace visualization in the UI. Shipped so far: the LabGraph chrome pass,
-      the trace component, relation labels, question-derived traces, and the
-      designed states for when a question can't be connected to the graph.
-      Next is entity kinds on trace nodes, then tying sources to graph nodes.
+      the trace component, relation labels, entity-kind chips,
+      question-derived traces, and the designed states for when a question
+      can't be connected to the graph. Next is tying sources to graph nodes.
 - [ ] **Week 6 — Demo video + reproducible public corpus + release.**
 
 ## Quick start
