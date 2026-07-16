@@ -185,8 +185,16 @@ The answer text should be plain and source-backed. Do not over-style assistant m
 
 The graph trace is the most important UI component.
 
+The trace must be derived from the question that produced the answer beside it.
+A path the question did not ask for is not evidence, and a plausible-looking
+wrong path is worse than no path at all: it invites the user to trust a
+connection the system never made. When the question cannot be connected to the
+graph, show the matching trace state below instead of substituting another
+path.
+
 Required behavior:
 
+- Resolve the trace endpoints from entities named in the question.
 - Show the path as ordered nodes connected by relation labels.
 - Use entity-kind chips for nodes.
 - Show relation labels between nodes, not just arrows.
@@ -213,8 +221,15 @@ Trace states:
 
 - Found: show full path, relation labels, and source-backed provenance.
 - No graph built: explain that documents need ingestion before graph tracing works.
+- No entities in question: the question named nothing in the graph. Say so, and
+  prompt the user to name two entities from their corpus. This is the most
+  common state on a real corpus, so it must read as a normal outcome rather
+  than a failure.
 - No path found: show searched endpoints and max depth, then suggest a next action.
-- Partial path: show the discovered neighborhood and clearly mark the missing connection.
+- Partial path: only one entity was named. Show its immediate neighborhood in
+  both edge directions — a Decision has no outbound edges, and the methods
+  decided in it are exactly the context worth showing — and mark the missing
+  endpoint.
 - Error: show a plain-language failure and preserve the answer and sources if they exist.
 
 ## Source Evidence
@@ -393,6 +408,8 @@ Completed:
 5. Keep old `DOCRAG_*` config names as backward-compatible fallbacks while making `LABGRAPH_*` the documented path.
 6. Replace the current inline trace row with a dedicated ordered graph trace component with a header, numbered nodes, stacked layout, and visual connectors.
 7. Enrich `/api/labgraph/query-trace` with relation metadata and render relation labels between trace nodes.
+8. Derive the trace from the question. `/api/query` resolves the entities named in the question, walks between them, and returns the trace with the answer, so an answer and its trace cannot disagree.
+9. Add designed states for no graph, no entities, no path, partial path, and graph error.
 
 ### Next UI Slice
 
@@ -401,9 +418,8 @@ Build the LabGraph answer experience before broadening ingestion.
 Required changes:
 
 1. Show entity kinds on nodes.
-2. Add designed states for no graph, no path, partial path, and graph error.
-3. Tie sources to graph nodes or relations when provenance data exists.
-4. Update empty and loading states to match this spec.
+2. Tie sources to graph nodes or relations when provenance data exists.
+3. Replace `Searching corpus...` with the staged query status named under Loading States.
 
 ### After That
 
@@ -430,6 +446,7 @@ Before shipping any LabGraph UI change:
 - The first screen says `LabGraph`.
 - The user can ask a multi-hop question without reading instructions.
 - The latest answer shows an answer, graph trace, and sources in that order.
+- The trace was derived from the question, or a trace state explains why there is none.
 - The trace includes node kinds and relation labels.
 - Empty states have a next action.
 - Loading states name the current operation.

@@ -181,6 +181,21 @@ def test_neighborhood_ignores_missing_seeds():
     assert nodes == []
 
 
+@pytest.mark.unit
+def test_neighborhood_follows_only_outbound_edges_by_default():
+    g = _small_graph()
+    # The decision is a sink: nothing is reachable by following edges forward.
+    nodes = g.neighborhood(["decision:march-team-sync"], max_depth=2)
+    assert {n.id for n in nodes} == {"decision:march-team-sync"}
+
+
+@pytest.mark.unit
+def test_undirected_neighborhood_reaches_inbound_neighbours():
+    g = _small_graph()
+    nodes = g.neighborhood(["decision:march-team-sync"], max_depth=1, directed=False)
+    assert "method:curriculum-learning" in {n.id for n in nodes}
+
+
 def _small_graph() -> LabGraph:
     g = LabGraph()
     g.add_entity(_person())

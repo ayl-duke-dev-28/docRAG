@@ -1,3 +1,4 @@
+import logging
 import tempfile
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -11,10 +12,20 @@ from docrag.config import BASE_DIR, LABGRAPH_DB_PATH, UPLOAD_DIR
 from docrag.ingest import ingest_file
 from docrag.retrieval import answer, source
 from docrag.storage import delete_document, get_document, init_db, list_documents, rename_document
-from labgraph.graph import LabGraph
 from labgraph.schema import Entity, EntityKind
 from labgraph.storage import load_graph
+from labgraph.trace import (
+    DEFAULT_MAX_DEPTH,
+    QuestionTrace,
+    TraceStatus,
+    trace_between,
+    trace_for_question,
+)
 
+logger = logging.getLogger(__name__)
+
+MAX_TRACE_DEPTH = 8
+MAX_TOP_K = 12
 
 app = FastAPI(title="LabGraph", version="0.1.0")
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
@@ -30,9 +41,10 @@ class RenameDocumentRequest(BaseModel):
 
 
 class QueryTraceRequest(BaseModel):
+    question: Optional[str] = None
     source_id: Optional[str] = None
     target_id: Optional[str] = None
-    max_depth: int = 4
+    max_depth: int = DEFAULT_MAX_DEPTH
 
 
 def clean_document_filename(filename: str) -> str:
@@ -97,34 +109,31 @@ def compact_relation(relation) -> Dict:
     }
 
 
-def graph_trace_response(graph: LabGraph, path: List[str]) -> Dict:
-    entities = [graph.get_entity(entity_id) for entity_id in path]
-    if not path or any(entity is None for entity in entities):
-        return {"found": False, "trace": [], "path": [], "relations": []}
-
-    compact_path = [compact_entity(entity) for entity in entities if entity is not None]
-    relations = []
-    for source_id, target_id in zip(path, path[1:]):
-        between = graph.relations_between(source_id, target_id)
-        if between:
-            relations.append(compact_relation(between[0]))
+def trace_to_dict(result: QuestionTrace) -> Dict:
     return {
-        "found": True,
-        "trace": [entity["name"] for entity in compact_path],
-        "path": compact_path,
-        "relations": relations,
+        "status": result.status.value,
+        "found": result.status is TraceStatus.FOUND,
+        "max_depth": result.max_depth,
+        "matched": [compact_entity(entity) for entity in result.matched],
+        "trace": [entity.name for entity in result.path],
+        "path": [compact_entity(entity) for entity in result.path],
+        "relations": [compact_relation(relation) for relation in result.relations],
+        "neighborhood": [compact_entity(entity) for entity in result.neighborhood],
     }
 
 
-def default_trace(graph: LabGraph, max_depth: int) -> List[str]:
-    people = list(graph.entities(kind=EntityKind.PERSON))
-    decisions = list(graph.entities(kind=EntityKind.DECISION))
-    for person in people:
-        for decision in decisions:
-            path = graph.shortest_path(person.id, decision.id, max_depth=max_depth)
-            if path:
-                return path
-    return []
+def question_trace(question: str) -> Dict:
+    """Build the trace for a question, degrading to an error state.
+
+    A graph failure must never cost the user an answer that retrieval already
+    produced, so this reports the failure in the trace instead of raising.
+    """
+    try:
+        graph = load_graph(LABGRAPH_DB_PATH)
+        return trace_to_dict(trace_for_question(graph, question))
+    except Exception:
+        logger.exception("Graph trace failed for question")
+        return trace_to_dict(QuestionTrace(status=TraceStatus.ERROR))
 
 
 @app.get("/api/labgraph/stats")
@@ -157,12 +166,19 @@ def labgraph_entities(kind: Optional[str] = None):
 @app.post("/api/labgraph/query-trace")
 def labgraph_query_trace(request: QueryTraceRequest):
     graph = load_graph(LABGRAPH_DB_PATH)
-    max_depth = max(1, min(request.max_depth, 8))
+    max_depth = max(1, min(request.max_depth, MAX_TRACE_DEPTH))
+
+    question = (request.question or "").strip()
+    if question:
+        return trace_to_dict(trace_for_question(graph, question, max_depth=max_depth))
     if request.source_id and request.target_id:
-        path = graph.shortest_path(request.source_id, request.target_id, max_depth=max_depth)
-    else:
-        path = default_trace(graph, max_depth=max_depth)
-    return graph_trace_response(graph, path)
+        return trace_to_dict(
+            trace_between(graph, request.source_id, request.target_id, max_depth=max_depth)
+        )
+    raise HTTPException(
+        status_code=400,
+        detail="Provide a question, or both source_id and target_id.",
+    )
 
 
 @app.patch("/api/documents/{document_id}")
@@ -236,9 +252,11 @@ async def upload(files: List[UploadFile] = File(...)):
 
 @app.post("/api/query")
 def query(request: QueryRequest):
-    if not request.question.strip():
+    question = request.question.strip()
+    if not question:
         raise HTTPException(status_code=400, detail="Question is required.")
-    return answer(request.question.strip(), max(1, min(request.top_k, 12)))
+    result = answer(question, max(1, min(request.top_k, MAX_TOP_K)))
+    return {**result, "trace": question_trace(question)}
 
 
 @app.get("/api/source/{chunk_id}")

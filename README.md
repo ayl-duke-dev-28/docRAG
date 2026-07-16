@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/ayl-duke-dev-28/docRAG/actions/workflows/ci.yml/badge.svg)](https://github.com/ayl-duke-dev-28/docRAG/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-83%20passing-brightgreen)](./tests)
+[![Tests](https://img.shields.io/badge/tests-109%20passing-brightgreen)](./tests)
 [![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen)](./labgraph)
 
 > **LabGraph is the current product direction.** It started as **docRAG**, a
@@ -118,8 +118,19 @@ loop on every push.
 - **Trace relation labels** — `/api/labgraph/query-trace` now returns relation
   metadata between path nodes, and the answer trace renders those relation
   labels as connector chips.
-- **Next UI slice** — show entity kinds on trace nodes, then add no-path/error
-  states.
+- **The trace is derived from the question** — `/api/query` resolves the
+  entities named in the question against the graph, walks between them, and
+  returns the trace alongside the answer. Previously the UI fetched a trace in
+  a separate call that ignored the question and returned the first
+  person→decision path in the graph, so every answer showed the same path.
+  An answer and its trace can no longer disagree.
+- **Designed trace states** — when the question can't be connected to the
+  graph, the trace region says which state it's in and what to do next:
+  `no_graph`, `no_entities` (nothing in the question matched), `partial` (one
+  entity named — shows its neighborhood), `no_path` (names the endpoints
+  searched and the depth), and `error` (preserves the answer and sources).
+- **Next UI slice** — show entity kinds on trace nodes, then tie sources to
+  graph nodes.
 
 ### New: continuous integration
 
@@ -285,8 +296,10 @@ labgraph/           — typed knowledge graph (shipped, Week 2)
   aliases.yaml      alias declarations (starter file)
   graph.py          NetworkX MultiDiGraph wrapper + multi-hop traversal
   extract.py        Extractor protocol + RegexExtractor + OpenAIExtractor stub
+  resolve.py        question text → entities named in the graph
+  trace.py          question → trace, with designed non-found states
   storage.py        SQLite persistence (save_graph / load_graph)
-tests/              — 83 tests, 95% combined coverage
+tests/              — 109 tests, 95% combined coverage
 .github/workflows/
   ci.yml            — pytest + eval schema validation on push/PR
 ```
@@ -300,4 +313,9 @@ video, public corpus.
 - `GET /api/health`
 - `GET /api/documents`
 - `POST /api/upload` with multipart field `files`
-- `POST /api/query` with JSON `{ "question": "...", "top_k": 6 }`
+- `POST /api/query` with JSON `{ "question": "...", "top_k": 6 }` — returns
+  `{ answer, sources, mode, trace }`, where `trace` is derived from `question`.
+- `GET /api/labgraph/stats`
+- `GET /api/labgraph/entities?kind=method`
+- `POST /api/labgraph/query-trace` with either `{ "question": "..." }` or an
+  explicit `{ "source_id": "...", "target_id": "..." }` pair.

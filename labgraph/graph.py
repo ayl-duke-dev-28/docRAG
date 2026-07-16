@@ -143,15 +143,21 @@ class LabGraph:
         return list(reversed(path))
 
     def neighborhood(
-        self, seed_ids: List[str], max_depth: int = 2
+        self, seed_ids: List[str], max_depth: int = 2, directed: bool = True
     ) -> List[Entity]:
-        """Return the set of entities reachable from any seed within max_depth hops."""
+        """Return the set of entities reachable from any seed within max_depth hops.
+
+        With ``directed=False``, edges are walked in both directions. Useful for
+        showing context around a sink node such as a Decision, which nothing is
+        reachable *from* but which several entities point *at*.
+        """
+        search_graph = self._graph if directed else self._graph.to_undirected(as_view=True)
         collected: Dict[str, Entity] = {}
         for seed in seed_ids:
             if seed not in self._graph:
                 continue
             for target_id in nx.single_source_shortest_path_length(
-                self._graph, seed, cutoff=max_depth
+                search_graph, seed, cutoff=max_depth
             ):
                 if target_id not in collected:
                     collected[target_id] = self._graph.nodes[target_id]["entity"]

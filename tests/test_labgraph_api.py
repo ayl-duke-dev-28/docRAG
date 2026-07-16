@@ -3,63 +3,8 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from labgraph.graph import LabGraph
-from labgraph.schema import Entity, EntityKind, Relation, RelationKind
 from labgraph.storage import load_graph, save_graph
-
-
-def _seed_graph() -> LabGraph:
-    graph = LabGraph()
-    graph.add_entity(
-        Entity(id="person:alex-liu", kind=EntityKind.PERSON, name="Alex Liu")
-    )
-    graph.add_entity(
-        Entity(
-            id="paper:training-stability-2024",
-            kind=EntityKind.PAPER,
-            name="training_stability_2024",
-            attrs=(("source_filename", "training_stability_2024.pdf"),),
-        )
-    )
-    graph.add_entity(
-        Entity(
-            id="method:curriculum-learning",
-            kind=EntityKind.METHOD,
-            name="curriculum learning",
-        )
-    )
-    graph.add_entity(
-        Entity(
-            id="decision:march-team-sync",
-            kind=EntityKind.DECISION,
-            name="March team sync",
-        )
-    )
-    graph.add_relation(
-        Relation(
-            source_id="person:alex-liu",
-            target_id="paper:training-stability-2024",
-            kind=RelationKind.AUTHORED,
-            provenance=("1",),
-        )
-    )
-    graph.add_relation(
-        Relation(
-            source_id="paper:training-stability-2024",
-            target_id="method:curriculum-learning",
-            kind=RelationKind.USES_METHOD,
-            provenance=("1",),
-        )
-    )
-    graph.add_relation(
-        Relation(
-            source_id="method:curriculum-learning",
-            target_id="decision:march-team-sync",
-            kind=RelationKind.DECIDED_IN,
-            provenance=("2",),
-        )
-    )
-    return graph
+from tests.conftest import build_seed_graph as _seed_graph
 
 
 @pytest.mark.integration
@@ -172,6 +117,125 @@ def test_labgraph_query_trace_endpoint_returns_readable_path(
             "attrs": {},
         },
     ]
+
+
+def _client_with_graph(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
+    """A TestClient whose graph is the seeded demo graph and whose retrieval is stubbed."""
+    import app as app_module
+
+    graph_path = tmp_path / "labgraph.sqlite3"
+    save_graph(_seed_graph(), graph_path)
+    monkeypatch.setattr(app_module, "LABGRAPH_DB_PATH", graph_path, raising=False)
+    monkeypatch.setattr(
+        app_module,
+        "answer",
+        lambda question, top_k: {"answer": "stub answer", "sources": [], "mode": "none"},
+    )
+    return TestClient(app_module.app)
+
+
+@pytest.mark.integration
+def test_query_endpoint_returns_a_trace_derived_from_the_question(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    # Arrange
+    client = _client_with_graph(tmp_path, monkeypatch)
+
+    # Act
+    response = client.post(
+        "/api/query",
+        json={"question": "What did Alex Liu contribute to the March team sync?"},
+    )
+
+    # Assert
+    assert response.status_code == 200
+    trace = response.json()["trace"]
+    assert trace["status"] == "found"
+    assert [node["name"] for node in trace["path"]] == [
+        "Alex Liu",
+        "training_stability_2024",
+        "curriculum learning",
+        "March team sync",
+    ]
+    assert [relation["kind"] for relation in trace["relations"]] == [
+        "authored",
+        "uses_method",
+        "decided_in",
+    ]
+
+
+@pytest.mark.integration
+def test_query_endpoint_returns_no_trace_for_a_question_unrelated_to_the_graph(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    # Arrange: the regression guard. This used to return the first
+    # person->decision path in the graph regardless of what was asked.
+    client = _client_with_graph(tmp_path, monkeypatch)
+
+    # Act
+    response = client.post("/api/query", json={"question": "What is the capital of France?"})
+
+    # Assert
+    payload = response.json()
+    assert payload["answer"] == "stub answer"
+    assert payload["trace"]["status"] == "no_entities"
+    assert payload["trace"]["path"] == []
+
+
+@pytest.mark.integration
+def test_query_endpoint_keeps_the_answer_when_the_graph_trace_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    # Arrange
+    import app as app_module
+
+    client = _client_with_graph(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        app_module,
+        "load_graph",
+        lambda path: (_ for _ in ()).throw(RuntimeError("graph is corrupt")),
+    )
+
+    # Act
+    response = client.post("/api/query", json={"question": "Alex Liu and the March team sync"})
+
+    # Assert
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["answer"] == "stub answer"
+    assert payload["trace"]["status"] == "error"
+
+
+@pytest.mark.integration
+def test_query_trace_endpoint_accepts_a_question(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    # Arrange
+    client = _client_with_graph(tmp_path, monkeypatch)
+
+    # Act
+    response = client.post(
+        "/api/labgraph/query-trace",
+        json={"question": "Alex Liu and the March team sync"},
+    )
+
+    # Assert
+    assert response.status_code == 200
+    assert response.json()["status"] == "found"
+
+
+@pytest.mark.integration
+def test_query_trace_endpoint_rejects_a_request_with_no_question_or_endpoints(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    # Arrange
+    client = _client_with_graph(tmp_path, monkeypatch)
+
+    # Act
+    response = client.post("/api/labgraph/query-trace", json={"max_depth": 4})
+
+    # Assert
+    assert response.status_code == 400
 
 
 @pytest.mark.integration

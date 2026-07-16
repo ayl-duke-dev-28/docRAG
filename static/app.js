@@ -164,11 +164,69 @@ function renderSources(sources) {
   `;
 }
 
-function renderTrace(trace) {
-  if (!trace || !trace.found || !trace.trace.length) return "";
-  const nodes = trace.path && trace.path.length
-    ? trace.path
-    : trace.trace.map((label) => ({ name: label }));
+function entityNames(entities) {
+  const names = (entities || []).map((entity) => entity.name);
+  if (names.length <= 1) return names.join("");
+  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}
+
+// Each state explains why there is no path and what to do about it. A trace is
+// only ever built from the question that produced the answer beside it, so an
+// empty state here is a real finding, not a rendering gap.
+function traceNotice(trace) {
+  if (trace.status === "no_graph") {
+    return {
+      title: "No graph built yet",
+      detail: "LabGraph extracts people, projects, methods, papers, and decisions from your documents, then connects them with typed relations.",
+      action: "Upload papers or notes to build the graph.",
+    };
+  }
+  if (trace.status === "no_entities") {
+    return {
+      title: "No graph entities in this question",
+      detail: "Nothing in this question matched a person, project, method, paper, or decision in the graph.",
+      action: "Name two things from your corpus and ask how they connect.",
+    };
+  }
+  if (trace.status === "partial") {
+    const matched = entityNames(trace.matched);
+    const nearby = entityNames(trace.neighborhood);
+    return {
+      title: `Only ${matched} matched`,
+      detail: nearby
+        ? `A path needs two endpoints. ${matched} connects directly to ${nearby}.`
+        : `A path needs two endpoints, and ${matched} has no connections in the graph yet.`,
+      action: "Add a second entity to the question to trace a path.",
+    };
+  }
+  if (trace.status === "no_path") {
+    return {
+      title: "No path found",
+      detail: `Searched between ${entityNames(trace.matched)} up to ${trace.max_depth} hops. They are not connected in the graph.`,
+      action: "Upload the document that links them, or ask about a closer pair.",
+    };
+  }
+  return {
+    title: "Graph trace unavailable",
+    detail: "The graph could not be searched for this question. The answer and sources are unaffected.",
+    action: "Retry the question, or check the graph status in the corpus panel.",
+  };
+}
+
+function renderTraceNotice(trace) {
+  const notice = traceNotice(trace);
+  return `
+    <div class="graph-trace trace-empty" data-status="${escapeHtml(trace.status)}">
+      <div class="trace-header"><strong>Graph trace</strong></div>
+      <p class="trace-empty-title">${escapeHtml(notice.title)}</p>
+      <p class="trace-empty-detail">${escapeHtml(notice.detail)}</p>
+      <p class="trace-empty-action">${escapeHtml(notice.action)}</p>
+    </div>
+  `;
+}
+
+function renderTracePath(trace) {
+  const nodes = trace.path;
   const relationLabel = (relation) => relation ? relation.kind.replaceAll("_", " ") : "related to";
   const steps = nodes.map((node, index) => `
     <li class="trace-step">
@@ -184,7 +242,7 @@ function renderTrace(trace) {
     </li>
   `).join("");
   return `
-    <div class="graph-trace">
+    <div class="graph-trace" data-status="found">
       <div class="trace-header">
         <strong>Graph trace</strong>
         <span>${nodes.length} nodes</span>
@@ -196,19 +254,14 @@ function renderTrace(trace) {
   `;
 }
 
-async function loadQueryTrace() {
-  const response = await fetch("/api/labgraph/query-trace", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ max_depth: 4 }),
-  });
-  if (!response.ok) return null;
-  return response.json();
+function renderTrace(trace) {
+  if (!trace) return "";
+  return trace.status === "found" ? renderTracePath(trace) : renderTraceNotice(trace);
 }
 
 async function ask(question) {
   addMessage("user", `<p>${escapeHtml(question)}</p>`);
-  const pending = addMessage("assistant", "<p>Searching papers...</p>");
+  const pending = addMessage("assistant", "<p>Searching corpus...</p>");
   const response = await fetch("/api/query", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -217,8 +270,7 @@ async function ask(question) {
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.detail || "Query failed.");
   modePill.textContent = payload.mode === "rag" ? "LLM RAG" : "Local retrieval";
-  const trace = await loadQueryTrace();
-  pending.innerHTML = `<p>${escapeHtml(payload.answer)}</p>${renderTrace(trace)}${renderSources(payload.sources)}`;
+  pending.innerHTML = `<p>${escapeHtml(payload.answer)}</p>${renderTrace(payload.trace)}${renderSources(payload.sources)}`;
 }
 
 inputEl.addEventListener("change", async (event) => {
