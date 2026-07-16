@@ -123,7 +123,10 @@ loop on every push.
   returns the trace alongside the answer. Previously the UI fetched a trace in
   a separate call that ignored the question and returned the first
   person→decision path in the graph, so every answer showed the same path.
-  An answer and its trace can no longer disagree.
+  An answer and its trace can no longer disagree. Note the scope: the *trace*
+  now walks the graph from entities named in the question, but the *answer*
+  text still comes from the legacy retrieval baseline. Graph-aware retrieval
+  is still Week 4.
 - **Designed trace states** — when the question can't be connected to the
   graph, the trace region says which state it's in and what to do next:
   `no_graph`, `no_entities` (nothing in the question matched), `partial` (one
@@ -167,9 +170,10 @@ loop on every push.
 - [ ] **Week 4 — Graph-aware retrieval.** Hybrid vector seed + bounded BFS
       along typed edges. First real eval score against the KG.
 - [ ] **Week 5 — Prompt + retrieval iteration** until eval hits **≥ 15 / 20**.
-      Trace visualization in the UI. The first LabGraph chrome pass is shipped;
-      the trace component foundation and relation labels are shipped; next is
-      entity kinds.
+      Trace visualization in the UI. Shipped so far: the LabGraph chrome pass,
+      the trace component, relation labels, question-derived traces, and the
+      designed states for when a question can't be connected to the graph.
+      Next is entity kinds on trace nodes, then tying sources to graph nodes.
 - [ ] **Week 6 — Demo video + reproducible public corpus + release.**
 
 ## Quick start
@@ -232,13 +236,15 @@ pytest --cov=evals --cov=labgraph
 
 ## Multi-hop demo (the proof it works)
 
-Two chunks in — one paper, one meeting note. The graph resolves a four-node
-path connecting a person to a decision through a paper and a method. This is
-the exact capability the whole project exists to demonstrate.
+Two chunks in — one paper, one meeting note. A **question** goes in, and the
+graph resolves a four-node path connecting a person to a decision through a
+paper and a method. Nobody hands it the endpoints: it finds them in the
+question. This is the exact capability the whole project exists to
+demonstrate.
 
 ```python
 from pathlib import Path
-from labgraph import AliasResolver, LabGraph, RegexExtractor
+from labgraph import AliasResolver, LabGraph, RegexExtractor, trace_for_question
 from labgraph.extract import Chunk, extract_many
 
 aliases = AliasResolver.from_yaml(Path("labgraph/aliases.yaml"))
@@ -254,22 +260,37 @@ g = LabGraph()
 for e in result.entities: g.add_entity(e)
 for r in result.relations: g.add_relation(r)
 
-path = g.shortest_path("person:alex-liu", "decision:march-team-sync", max_depth=4)
-print(f"entities={g.entity_count} relations={g.relation_count}")
-print(" -> ".join(path))
+for question in [
+    "What did Alex Liu contribute to the March team sync?",
+    "What is the capital of France?",
+]:
+    trace = trace_for_question(g, question, max_depth=4)
+    print(f"Q: {question}")
+    print(f"   status: {trace.status.value}")
+    if trace.path:
+        print("   " + " -> ".join(e.id for e in trace.path))
 ```
 
 Real output (from the current build on `main`):
 
 ```
-entities=5 relations=4
-person:alex-liu -> paper:training-stability-2024 -> method:curriculum-learning -> decision:march-team-sync
+Q: What did Alex Liu contribute to the March team sync?
+   status: found
+   person:alex-liu -> paper:training-stability-2024 -> method:curriculum-learning -> decision:march-team-sync
+Q: What is the capital of France?
+   status: no_entities
 ```
 
 Reading the path: *Alex Liu authored a paper that uses curriculum learning,
 and that method was decided in the March team sync.* Four nodes, three
 typed edges, one paper + one meeting note bridged. Standard RAG cannot do
-this — it retrieves passages, not typed relationships. Once the OpenAI
+this — it retrieves passages, not typed relationships.
+
+The second question is the other half of the proof. It names nothing in the
+graph, so it gets `no_entities` rather than a path. A trace that appears no
+matter what you ask is decoration; one that can come back empty is evidence.
+
+Once the OpenAI
 extractor and KG-aware retrieval land (Weeks 2b + 4), the same traversal
 runs on real lab documents against the eval set.
 
