@@ -77,23 +77,32 @@ def test_labgraph_query_trace_endpoint_returns_readable_path(
         "March team sync",
     ]
     assert payload["path"] == [
-        {"id": "person:alex-liu", "kind": "person", "name": "Alex Liu", "attrs": {}},
+        {
+            "id": "person:alex-liu",
+            "kind": "person",
+            "name": "Alex Liu",
+            "aliases": [],
+            "attrs": {},
+        },
         {
             "id": "paper:training-stability-2024",
             "kind": "paper",
             "name": "training_stability_2024",
+            "aliases": [],
             "attrs": {"source_filename": "training_stability_2024.pdf"},
         },
         {
             "id": "method:curriculum-learning",
             "kind": "method",
             "name": "curriculum learning",
+            "aliases": [],
             "attrs": {},
         },
         {
             "id": "decision:march-team-sync",
             "kind": "decision",
             "name": "March team sync",
+            "aliases": [],
             "attrs": {},
         },
     ]

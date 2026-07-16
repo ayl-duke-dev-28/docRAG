@@ -279,6 +279,58 @@ function entityKindLabel(kind) {
   return kind.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
+function formatAttrs(attrs) {
+  return Object.entries(attrs || {}).map(([key, value]) => `${key}: ${value}`);
+}
+
+function renderDetailRows(rows) {
+  const visibleRows = rows.filter((row) => row.value);
+  if (!visibleRows.length) return "";
+  return `
+    <dl class="trace-details-grid">
+      ${visibleRows.map((row) => `
+        <dt>${escapeHtml(row.label)}</dt>
+        <dd>${escapeHtml(row.value)}</dd>
+      `).join("")}
+    </dl>
+  `;
+}
+
+function renderTraceNodeDetails(node) {
+  const aliases = (node.aliases || []).join(", ");
+  const attrs = formatAttrs(node.attrs).join("; ");
+  const details = renderDetailRows([
+    { label: "Canonical id", value: node.id },
+    { label: "Aliases", value: aliases },
+    { label: "Attributes", value: attrs },
+  ]);
+  if (!details) return "";
+  return `
+    <details class="trace-details">
+      <summary>Details</summary>
+      ${details}
+    </details>
+  `;
+}
+
+function renderTraceRelationDetails(relation) {
+  const attrs = formatAttrs(relation && relation.attrs).join("; ");
+  const details = renderDetailRows([
+    { label: "Relation", value: relation ? relation.kind : "" },
+    { label: "Source id", value: relation ? relation.source_id : "" },
+    { label: "Target id", value: relation ? relation.target_id : "" },
+    { label: "Provenance chunks", value: relation && relation.provenance ? relation.provenance.join(", ") : "" },
+    { label: "Attributes", value: attrs },
+  ]);
+  if (!details) return "";
+  return `
+    <details class="trace-details trace-edge-details">
+      <summary>Edge details</summary>
+      ${details}
+    </details>
+  `;
+}
+
 function renderTracePath(trace) {
   const nodes = trace.path;
   const steps = nodes.map((node, index) => `
@@ -287,10 +339,12 @@ function renderTracePath(trace) {
         <span class="trace-index">${index + 1}</span>
         <span class="trace-kind" data-kind="${escapeHtml(node.kind || "entity")}">${escapeHtml(entityKindLabel(node.kind))}</span>
         <span class="trace-label">${escapeHtml(node.name)}</span>
+        ${renderTraceNodeDetails(node)}
       </div>
       ${index < nodes.length - 1 ? `
         <div class="trace-edge">
           <span>${escapeHtml(relationLabel(trace.relations && trace.relations[index]))}</span>
+          ${renderTraceRelationDetails(trace.relations && trace.relations[index])}
         </div>
       ` : ""}
     </li>

@@ -137,8 +137,11 @@ loop on every push.
   searched and the depth), and `error` (preserves the answer and sources).
 - **Source-to-graph evidence** — sources now show which trace node or relation
   they support when the trace exposes matching filename or chunk provenance.
-- **Next UI slice** — add richer trace detail disclosure for node aliases,
-  canonical ids, relation provenance, and graph diagnostics.
+- **Trace detail disclosure** — trace nodes now expose expandable canonical
+  ids, aliases, and attrs; relation connectors expose source/target ids,
+  relation kind, provenance chunk IDs, and attrs.
+- **Next UI slice** — add graph diagnostics that explain entity matching,
+  searched endpoints, and path selection.
 
 ### New: continuous integration
 
@@ -177,9 +180,9 @@ loop on every push.
 - [ ] **Week 5 — Prompt + retrieval iteration** until eval hits **≥ 15 / 20**.
       Trace visualization in the UI. Shipped so far: the LabGraph chrome pass,
       the trace component, relation labels, entity-kind chips,
-      source-to-graph evidence, question-derived traces, and the designed
-      states for when a question can't be connected to the graph. Next is
-      richer trace detail disclosure.
+      source-to-graph evidence, trace detail disclosure, question-derived
+      traces, and the designed states for when a question can't be connected
+      to the graph. Next is graph diagnostics.
 - [ ] **Week 6 — Demo video + reproducible public corpus + release.**
 
 ## Quick start
@@ -342,9 +345,9 @@ demo video, public corpus.
 - `POST /api/upload` with multipart field `files`
 - `POST /api/query` with JSON `{ "question": "...", "top_k": 6 }` — returns
   `{ answer, sources, mode, trace }`, where `trace` is derived from `question`.
-  Trace path nodes include `id`, `kind`, `name`, and `attrs`; relation
-  provenance uses chunk IDs, which the UI uses to label which sources support
-  graph nodes or edges.
+  Trace path nodes include `id`, `kind`, `name`, `aliases`, and `attrs`;
+  relation provenance uses chunk IDs, which the UI uses to label which sources
+  support graph nodes or edges.
 - `GET /api/labgraph/stats`
 - `GET /api/labgraph/entities?kind=method`
 - `POST /api/labgraph/query-trace` with either `{ "question": "..." }` or an
