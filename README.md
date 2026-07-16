@@ -135,8 +135,10 @@ loop on every push.
   `no_graph`, `no_entities` (nothing in the question matched), `partial` (one
   entity named — shows its neighborhood), `no_path` (names the endpoints
   searched and the depth), and `error` (preserves the answer and sources).
-- **Next UI slice** — tie sources to graph nodes or relations when provenance
-  data exists.
+- **Source-to-graph evidence** — sources now show which trace node or relation
+  they support when the trace exposes matching filename or chunk provenance.
+- **Next UI slice** — add richer trace detail disclosure for node aliases,
+  canonical ids, relation provenance, and graph diagnostics.
 
 ### New: continuous integration
 
@@ -175,8 +177,9 @@ loop on every push.
 - [ ] **Week 5 — Prompt + retrieval iteration** until eval hits **≥ 15 / 20**.
       Trace visualization in the UI. Shipped so far: the LabGraph chrome pass,
       the trace component, relation labels, entity-kind chips,
-      question-derived traces, and the designed states for when a question
-      can't be connected to the graph. Next is tying sources to graph nodes.
+      source-to-graph evidence, question-derived traces, and the designed
+      states for when a question can't be connected to the graph. Next is
+      richer trace detail disclosure.
 - [ ] **Week 6 — Demo video + reproducible public corpus + release.**
 
 ## Quick start

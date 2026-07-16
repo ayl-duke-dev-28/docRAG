@@ -150,13 +150,62 @@ async function removeDocument(documentId) {
   return payload;
 }
 
-function renderSources(sources) {
+function relationLabel(relation) {
+  return relation ? relation.kind.replaceAll("_", " ") : "related to";
+}
+
+function traceNodeById(trace, nodeId) {
+  return (trace.path || []).find((node) => node.id === nodeId);
+}
+
+function graphEvidenceForSource(source, trace) {
+  if (!trace || trace.status !== "found") return [];
+  const chunkId = String(source.chunk_id);
+  const evidence = [];
+
+  for (const node of trace.path || []) {
+    if (node.attrs && node.attrs.source_filename === source.filename) {
+      evidence.push({
+        key: `node:${node.id}`,
+        label: `Node: ${entityKindLabel(node.kind)} · ${node.name}`,
+      });
+    }
+  }
+
+  for (const relation of trace.relations || []) {
+    const provenance = relation.provenance || [];
+    if (!provenance.includes(chunkId)) continue;
+    const sourceNode = traceNodeById(trace, relation.source_id);
+    const targetNode = traceNodeById(trace, relation.target_id);
+    evidence.push({
+      key: `relation:${relation.source_id}:${relation.target_id}:${relation.kind}`,
+      label: `Edge: ${sourceNode ? sourceNode.name : relation.source_id} → ${targetNode ? targetNode.name : relation.target_id} · ${relationLabel(relation)}`,
+    });
+  }
+
+  return evidence.filter(
+    (item, index, all) => all.findIndex((other) => other.key === item.key) === index
+  );
+}
+
+function renderSourceEvidence(source, trace) {
+  const evidence = graphEvidenceForSource(source, trace);
+  if (!evidence.length) return "";
+  return `
+    <div class="source-evidence" aria-label="Graph evidence supported by this source">
+      ${evidence.map((item) => `<span>${escapeHtml(item.label)}</span>`).join("")}
+    </div>
+  `;
+}
+
+function renderSources(sources, trace) {
   if (!sources || !sources.length) return "";
   return `
     <div class="sources">
       ${sources.map((source, index) => `
         <details class="source">
           <summary>[${index + 1}] ${escapeHtml(source.filename)}, pages ${escapeHtml(source.pages)}</summary>
+          ${renderSourceEvidence(source, trace)}
           <p>${escapeHtml(source.text)}</p>
         </details>
       `).join("")}
@@ -232,7 +281,6 @@ function entityKindLabel(kind) {
 
 function renderTracePath(trace) {
   const nodes = trace.path;
-  const relationLabel = (relation) => relation ? relation.kind.replaceAll("_", " ") : "related to";
   const steps = nodes.map((node, index) => `
     <li class="trace-step">
       <div class="trace-node">
@@ -276,7 +324,7 @@ async function ask(question) {
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.detail || "Query failed.");
   modePill.textContent = payload.mode === "rag" ? "LLM RAG" : "Local retrieval";
-  pending.innerHTML = `<p>${escapeHtml(payload.answer)}</p>${renderTrace(payload.trace)}${renderSources(payload.sources)}`;
+  pending.innerHTML = `<p>${escapeHtml(payload.answer)}</p>${renderTrace(payload.trace)}${renderSources(payload.sources, payload.trace)}`;
 }
 
 inputEl.addEventListener("change", async (event) => {

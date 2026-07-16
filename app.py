@@ -96,6 +96,7 @@ def compact_entity(entity: Entity) -> Dict:
         "id": entity.id,
         "kind": entity.kind.value,
         "name": entity.name,
+        "attrs": entity.as_attrs_dict(),
     }
 
 
