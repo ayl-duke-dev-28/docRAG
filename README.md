@@ -335,8 +335,8 @@ tests/              — 109 tests, 95% combined coverage
 ```
 
 Not yet built (Weeks 2b–6): OpenAI extractor implementation, Google Drive
-ingestion adapter, KG-aware retrieval + KG SUT, richer trace detail disclosure,
-demo video, public corpus.
+ingestion adapter, KG-aware retrieval + KG SUT, graph diagnostics, demo video,
+public corpus.
 
 ## API
 
