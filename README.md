@@ -332,8 +332,8 @@ tests/              — 109 tests, 95% combined coverage
 ```
 
 Not yet built (Weeks 2b–6): OpenAI extractor implementation, Google Drive
-ingestion adapter, KG-aware retrieval + KG SUT, trace visualization, demo
-video, public corpus.
+ingestion adapter, KG-aware retrieval + KG SUT, richer trace detail disclosure,
+demo video, public corpus.
 
 ## API
 
@@ -342,6 +342,9 @@ video, public corpus.
 - `POST /api/upload` with multipart field `files`
 - `POST /api/query` with JSON `{ "question": "...", "top_k": 6 }` — returns
   `{ answer, sources, mode, trace }`, where `trace` is derived from `question`.
+  Trace path nodes include `id`, `kind`, `name`, and `attrs`; relation
+  provenance uses chunk IDs, which the UI uses to label which sources support
+  graph nodes or edges.
 - `GET /api/labgraph/stats`
 - `GET /api/labgraph/entities?kind=method`
 - `POST /api/labgraph/query-trace` with either `{ "question": "..." }` or an
