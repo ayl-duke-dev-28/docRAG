@@ -225,6 +225,11 @@ function renderTraceNotice(trace) {
   `;
 }
 
+function entityKindLabel(kind) {
+  if (!kind) return "Entity";
+  return kind.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
 function renderTracePath(trace) {
   const nodes = trace.path;
   const relationLabel = (relation) => relation ? relation.kind.replaceAll("_", " ") : "related to";
@@ -232,6 +237,7 @@ function renderTracePath(trace) {
     <li class="trace-step">
       <div class="trace-node">
         <span class="trace-index">${index + 1}</span>
+        <span class="trace-kind" data-kind="${escapeHtml(node.kind || "entity")}">${escapeHtml(entityKindLabel(node.kind))}</span>
         <span class="trace-label">${escapeHtml(node.name)}</span>
       </div>
       ${index < nodes.length - 1 ? `

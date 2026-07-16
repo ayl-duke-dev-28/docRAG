@@ -355,7 +355,7 @@ button:disabled {
 
 .trace-node {
   display: grid;
-  grid-template-columns: 24px minmax(0, 1fr);
+  grid-template-columns: 24px auto minmax(0, 1fr);
   align-items: center;
   gap: 8px;
   border: 1px solid #d9e2df;
@@ -374,6 +374,42 @@ button:disabled {
   color: #ffffff;
   font-size: 12px;
   font-weight: 700;
+}
+
+.trace-kind {
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 3px 7px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.trace-kind[data-kind="person"] {
+  color: #2563eb;
+  background: #eff6ff;
+}
+
+.trace-kind[data-kind="project"] {
+  color: #7c3aed;
+  background: #f5f3ff;
+}
+
+.trace-kind[data-kind="method"] {
+  color: #0f766e;
+  background: #ecfdf5;
+}
+
+.trace-kind[data-kind="paper"] {
+  color: #b45309;
+  background: #fff7ed;
+}
+
+.trace-kind[data-kind="decision"] {
+  color: #be123c;
+  background: #fff1f2;
 }
 
 .trace-label {
