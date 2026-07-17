@@ -140,8 +140,11 @@ loop on every push.
 - **Trace detail disclosure** — trace nodes now expose expandable canonical
   ids, aliases, and attrs; relation connectors expose source/target ids,
   relation kind, provenance chunk IDs, and attrs.
-- **Next UI slice** — add graph diagnostics that explain entity matching,
-  searched endpoints, and path selection.
+- **Graph diagnostics** — each trace now exposes status, matched entities,
+  searched endpoints, max depth, returned path size, and the path-selection
+  rule.
+- **Next UI slice** — move from trace presentation to the next backend
+  milestone: the structured-outputs OpenAI extractor.
 
 ### New: continuous integration
 
@@ -182,7 +185,7 @@ loop on every push.
       the trace component, relation labels, entity-kind chips,
       source-to-graph evidence, trace detail disclosure, question-derived
       traces, and the designed states for when a question can't be connected
-      to the graph. Next is graph diagnostics.
+      to the graph, plus graph diagnostics.
 - [ ] **Week 6 — Demo video + reproducible public corpus + release.**
 
 ## Quick start

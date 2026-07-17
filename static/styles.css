@@ -481,6 +481,20 @@ button:disabled {
   overflow-wrap: anywhere;
 }
 
+.trace-diagnostics {
+  margin-top: 12px;
+  border-top: 1px solid #d9e2df;
+  padding-top: 10px;
+  color: #394a44;
+  font-size: 12px;
+}
+
+.trace-diagnostics summary {
+  cursor: pointer;
+  color: #20524b;
+  font-weight: 700;
+}
+
 .source {
   border-left: 3px solid var(--warm);
   padding-left: 10px;

@@ -270,6 +270,7 @@ function renderTraceNotice(trace) {
       <p class="trace-empty-title">${escapeHtml(notice.title)}</p>
       <p class="trace-empty-detail">${escapeHtml(notice.detail)}</p>
       <p class="trace-empty-action">${escapeHtml(notice.action)}</p>
+      ${renderGraphDiagnostics(trace)}
     </div>
   `;
 }
@@ -331,6 +332,32 @@ function renderTraceRelationDetails(relation) {
   `;
 }
 
+function diagnosticEndpoints(trace) {
+  const matched = trace.matched || [];
+  if (matched.length >= 2) return matched.map((entity) => entity.name).join(" ↔ ");
+  if (matched.length === 1) return `${matched[0].name}; waiting for a second matched entity`;
+  return "No graph entities matched";
+}
+
+function renderGraphDiagnostics(trace) {
+  const path = trace.path || [];
+  const matched = trace.matched || [];
+  const rows = [
+    { label: "Status", value: trace.status },
+    { label: "Matched entities", value: matched.length ? matched.map((entity) => entity.name).join(", ") : "None" },
+    { label: "Searched endpoints", value: diagnosticEndpoints(trace) },
+    { label: "Max depth", value: trace.max_depth ? `${trace.max_depth} hops` : "" },
+    { label: "Returned path", value: path.length ? `${path.length} nodes, ${Math.max(0, path.length - 1)} hops` : "No path returned" },
+    { label: "Path selection", value: "Prefers paths touching the most named entities, then the shortest path." },
+  ];
+  return `
+    <details class="trace-diagnostics">
+      <summary>Graph diagnostics</summary>
+      ${renderDetailRows(rows)}
+    </details>
+  `;
+}
+
 function renderTracePath(trace) {
   const nodes = trace.path;
   const steps = nodes.map((node, index) => `
@@ -358,6 +385,7 @@ function renderTracePath(trace) {
       <ol class="trace-path" aria-label="Graph traversal path">
         ${steps}
       </ol>
+      ${renderGraphDiagnostics(trace)}
     </div>
   `;
 }
