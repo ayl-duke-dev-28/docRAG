@@ -113,6 +113,60 @@ def test_structured_extraction_rejects_duplicate_or_unknown_entity_keys():
 
 
 @pytest.mark.unit
+def test_structured_extraction_rejects_invalid_relation_direction():
+    entities = [
+        ExtractionEntity(
+            key="paper",
+            kind=EntityKind.PAPER,
+            name="Training Stability",
+            aliases=[],
+            attributes=[],
+        ),
+        ExtractionEntity(
+            key="author",
+            kind=EntityKind.PERSON,
+            name="Alex Liu",
+            aliases=[],
+            attributes=[],
+        ),
+    ]
+
+    with pytest.raises(ValidationError, match="authored requires person -> paper"):
+        StructuredExtraction(
+            entities=entities,
+            relations=[
+                ExtractionRelation(
+                    source_key="paper",
+                    target_key="author",
+                    kind=RelationKind.AUTHORED,
+                    attributes=[],
+                )
+            ],
+        )
+
+
+@pytest.mark.unit
+def test_schema_rejects_blank_identifiers_and_names():
+    with pytest.raises(ValidationError):
+        ExtractionEntity(
+            key=" ",
+            kind=EntityKind.PERSON,
+            name="Alex Liu",
+            aliases=[],
+            attributes=[],
+        )
+
+    with pytest.raises(ValidationError):
+        ExtractionEntity(
+            key="author",
+            kind=EntityKind.PERSON,
+            name=" ",
+            aliases=[],
+            attributes=[],
+        )
+
+
+@pytest.mark.unit
 def test_generated_json_schema_is_strict_and_all_fields_are_required():
     schema = StructuredExtraction.model_json_schema()
 
