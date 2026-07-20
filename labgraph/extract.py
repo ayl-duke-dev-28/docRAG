@@ -1,8 +1,12 @@
 import re
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Protocol, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Protocol, Sequence, Tuple
+
+from openai import OpenAI, OpenAIError
+from pydantic import ValidationError
 
 from .aliases import AliasResolver
+from .extraction_schema import StructuredExtraction
 from .schema import Entity, EntityKind, Relation, RelationKind, canonical_id
 
 
@@ -189,27 +193,166 @@ def _classify_source(filename_lower: str) -> str:
     return "unknown"
 
 
-# ---- LLM extractor stub ---------------------------------------------
+# ---- LLM extractor --------------------------------------------------
+
+
+class OpenAIExtractionError(RuntimeError):
+    """Raised when a chunk cannot be converted from an OpenAI response."""
+
+
+_EXTRACTION_PROMPT = """\
+Extract a typed knowledge graph from exactly one research-document chunk.
+
+Return only entities and relations explicitly supported by the text. Use the
+five entity kinds and six relation kinds defined by the response schema. Give
+each entity a short local key that is unique within this response, and refer to
+those keys from relations. Include the source document itself as a paper
+entity when the filename identifies a document. Use empty arrays when nothing
+relevant is present. Do not invent provenance; the application attaches the
+chunk identifier after validation.
+"""
 
 
 class OpenAIExtractor:
-    """Placeholder for the real LLM extractor.
-
-    Kept as a stub so the runtime interface exists and the graph builder can
-    switch implementations by name. The real implementation lands in the next
-    slice and issues one structured-outputs call per chunk.
-    """
+    """Extract typed graph objects with one structured-output call per chunk."""
 
     name = "openai"
 
-    def __init__(self, model: str = "gpt-4o-mini") -> None:
+    def __init__(
+        self,
+        model: str = "gpt-4o-mini",
+        client: Optional[Any] = None,
+        aliases: Optional[AliasResolver] = None,
+    ) -> None:
         self.model = model
+        self._client = client if client is not None else OpenAI()
+        self._aliases = aliases or AliasResolver()
 
     def extract(self, chunk: Chunk) -> ExtractionResult:
-        raise NotImplementedError(
-            "OpenAIExtractor is not implemented yet. "
-            "Use RegexExtractor for CI and tests; the OpenAI implementation lands next."
+        try:
+            response = self._client.responses.parse(
+                model=self.model,
+                input=[
+                    {"role": "system", "content": _EXTRACTION_PROMPT},
+                    {
+                        "role": "user",
+                        "content": (
+                            f"Filename: {chunk.filename}\n"
+                            f"Chunk ID: {chunk.id}\n\n"
+                            f"Text:\n{chunk.text}"
+                        ),
+                    },
+                ],
+                text_format=StructuredExtraction,
+            )
+        except ValidationError as exc:
+            raise OpenAIExtractionError(
+                f"OpenAI returned invalid structured output: {exc}"
+            ) from exc
+        except OpenAIError as exc:
+            raise OpenAIExtractionError(
+                f"OpenAI extraction request failed: {exc}"
+            ) from exc
+
+        parsed = getattr(response, "output_parsed", None)
+        if parsed is None:
+            refusal = _response_refusal(response)
+            if refusal:
+                raise OpenAIExtractionError(f"OpenAI refused extraction: {refusal}")
+            raise OpenAIExtractionError("OpenAI response contained no parsed output")
+
+        if not isinstance(parsed, StructuredExtraction):
+            try:
+                parsed = StructuredExtraction.model_validate(parsed)
+            except ValidationError as exc:
+                raise OpenAIExtractionError(
+                    f"OpenAI returned invalid structured output: {exc}"
+                ) from exc
+
+        return self._to_graph_result(parsed, chunk)
+
+    def _to_graph_result(
+        self, parsed: StructuredExtraction, chunk: Chunk
+    ) -> ExtractionResult:
+        entities: Dict[str, Entity] = {}
+        ids_by_key: Dict[str, str] = {}
+
+        for extracted in parsed.entities:
+            entity_id = self._aliases.resolve(extracted.kind, extracted.name)
+            ids_by_key[extracted.key] = entity_id
+            attrs = dict((item.key, item.value) for item in extracted.attributes)
+            if chunk.filename:
+                attrs["source_filename"] = chunk.filename
+            aliases = tuple(
+                dict.fromkeys(
+                    alias
+                    for alias in extracted.aliases
+                    if alias and alias != extracted.name
+                )
+            )
+            candidate = Entity(
+                id=entity_id,
+                kind=extracted.kind,
+                name=extracted.name,
+                aliases=aliases,
+                attrs=tuple(attrs.items()),
+            )
+            entities[entity_id] = _merge_entity(entities.get(entity_id), candidate)
+
+        relations = []
+        for extracted in parsed.relations:
+            try:
+                relation = Relation(
+                    source_id=ids_by_key[extracted.source_key],
+                    target_id=ids_by_key[extracted.target_key],
+                    kind=extracted.kind,
+                    provenance=(chunk.id,),
+                    attrs=tuple(
+                        (item.key, item.value) for item in extracted.attributes
+                    ),
+                )
+            except (KeyError, ValueError) as exc:
+                raise OpenAIExtractionError(
+                    f"Validated extraction could not be converted: {exc}"
+                ) from exc
+            relations.append(relation)
+
+        return ExtractionResult(
+            entities=tuple(entities.values()),
+            relations=tuple(relations),
         )
+
+
+def _merge_entity(existing: Optional[Entity], candidate: Entity) -> Entity:
+    if existing is None:
+        return candidate
+
+    aliases = tuple(
+        dict.fromkeys(
+            existing.aliases
+            + (candidate.name,)
+            + candidate.aliases
+        )
+    )
+    attrs = dict(existing.attrs)
+    attrs.update(candidate.attrs)
+    return Entity(
+        id=existing.id,
+        kind=existing.kind,
+        name=existing.name,
+        aliases=aliases,
+        attrs=tuple(attrs.items()),
+    )
+
+
+def _response_refusal(response: Any) -> Optional[str]:
+    for item in getattr(response, "output", ()) or ():
+        for content in getattr(item, "content", ()) or ():
+            if getattr(content, "type", None) == "refusal":
+                refusal = getattr(content, "refusal", None)
+                if refusal:
+                    return str(refusal)
+    return None
 
 
 # ---- convenience -----------------------------------------------------
