@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/ayl-duke-dev-28/docRAG/actions/workflows/ci.yml/badge.svg)](https://github.com/ayl-duke-dev-28/docRAG/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-117%20passing-brightgreen)](./tests)
+[![Tests](https://img.shields.io/badge/tests-122%20passing-brightgreen)](./tests)
 [![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen)](./labgraph)
 
 > **LabGraph is the current product direction.** It started as **docRAG**, a
@@ -88,8 +88,10 @@ loop on every push.
 - **`labgraph/extract.py`** — `Extractor` protocol with two implementations:
   a **`RegexExtractor`** (deterministic, dependency-free — used by tests and
   CI so no OpenAI credits are burned per run) and an **`OpenAIExtractor`**
-  stub that lands as a real structured-outputs call in the next slice.
-  `extract_many` batches chunks and dedupes entities.
+  that makes one Responses API structured-output call per chunk, converts the
+  validated response into canonical graph objects, and attaches chunk
+  provenance to every relation. `extract_many` batches chunks and dedupes
+  entities.
 - **`labgraph/extraction_schema.py`** — strict Pydantic response models for
   the OpenAI extractor. The generated JSON Schema requires every field,
   rejects unknown fields and enum values, validates local entity references,
@@ -100,7 +102,7 @@ loop on every push.
   provenance chunk IDs.
 - **Verified end-to-end** — the [Multi-hop demo](#multi-hop-demo-the-proof-it-works)
   section below shows the runnable snippet and its actual output.
-- **55 new tests, 95% coverage on `labgraph/`.**
+- **60 new tests, 95% coverage on `labgraph/`.**
 
 ### New: LabGraph UI foundation
 
@@ -148,8 +150,8 @@ loop on every push.
   searched endpoints, max depth, returned path size, and the path-selection
   rule.
 - **Next UI slice** — move from trace presentation to the next backend
-  milestone: call OpenAI with the shipped extraction schema and convert the
-  validated response into canonical graph entities and relations.
+  milestone: select the OpenAI extractor through configuration and use it in
+  the document-ingestion pipeline when an API key is available.
 
 ### New: continuous integration
 
@@ -182,7 +184,9 @@ loop on every push.
 - [ ] **Week 2b — OpenAI extractor.** Replace the regex baseline with a
       structured-outputs LLM call per chunk. Same `Extractor` protocol, no
       pipeline changes downstream. Shipped so far: the strict entity/relation
-      response schema, reference validation, and relation-direction checks.
+      response schema, reference validation, relation-direction checks, the
+      Responses API call, canonical conversion, provenance, and refusal/error
+      handling. Runtime ingestion selection remains.
 - [ ] **Week 3 — Google Drive ingestion.** OAuth flow, Docs → chunks → graph.
 - [ ] **Week 4 — Graph-aware retrieval.** Hybrid vector seed + bounded BFS
       along typed edges. First real eval score against the KG.
@@ -308,8 +312,9 @@ The second question is the other half of the proof. It names nothing in the
 graph, so it gets `no_entities` rather than a path. A trace that appears no
 matter what you ask is decoration; one that can come back empty is evidence.
 
-Once the OpenAI call and KG-aware retrieval land (Weeks 2b + 4), the same
-traversal runs on real lab documents against the eval set.
+Once the OpenAI extractor is selected by runtime ingestion and KG-aware
+retrieval lands (Weeks 2b + 4), the same traversal runs on real lab documents
+against the eval set.
 
 ## Architecture
 
@@ -334,18 +339,17 @@ labgraph/           — typed knowledge graph (shipped, Week 2)
   aliases.py        AliasResolver + YAML loader
   aliases.yaml      alias declarations (starter file)
   graph.py          NetworkX MultiDiGraph wrapper + multi-hop traversal
-  extract.py        Extractor protocol + RegexExtractor + OpenAIExtractor stub
+  extract.py        Regex + OpenAI extractors and canonical response conversion
   resolve.py        question text → entities named in the graph
   trace.py          question → trace, with designed non-found states
   storage.py        SQLite persistence (save_graph / load_graph)
-tests/              — 117 tests, 95% combined coverage
+tests/              — 122 tests, 95% combined coverage
 .github/workflows/
   ci.yml            — pytest + eval schema validation on push/PR
 ```
 
-Not yet built (Weeks 2b–6): OpenAI extraction call and canonical conversion,
-Google Drive ingestion adapter, KG-aware retrieval + KG SUT, demo video, and
-public corpus.
+Not yet built (Weeks 2b–6): runtime OpenAI extractor selection, Google Drive
+ingestion adapter, KG-aware retrieval + KG SUT, demo video, and public corpus.
 
 ## API
 

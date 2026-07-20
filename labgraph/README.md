@@ -29,8 +29,9 @@ nodes; the bridge between them is what powers multi-hop.
   Merging is idempotent — the same entity ingested twice grows its alias set
   instead of duplicating.
 - **`extract.py`** — `Extractor` protocol + `RegexExtractor` (deterministic
-  baseline) + `OpenAIExtractor` (stub for the LLM slice). `extract_many`
-  batches chunks.
+  baseline) + `OpenAIExtractor` (one structured Responses API call per chunk,
+  followed by canonical entity/relation conversion). `extract_many` batches
+  chunks.
 - **`storage.py`** — `save_graph` / `load_graph` persist the graph to SQLite
   (`labgraph_entities` + `labgraph_relations` tables) so runs survive
   process restart.
@@ -38,10 +39,10 @@ nodes; the bridge between them is what powers multi-hop.
 ## Why a regex extractor exists
 
 CI runs on every push without an OpenAI key. The regex extractor is
-deterministic, dependency-free, and slow-path-free — so tests and CI can
+deterministic, dependency-free, and slow-path-free, so tests and CI can
 exercise the full pipeline (extract → build graph → traverse) without
-network or token cost. The real LLM extractor lands next; both implement
-the same `Extractor` protocol so callers do not care.
+network or token cost. The OpenAI extractor implements the same protocol and
+is tested with an injected client, so CI still makes no network requests.
 
 ## Quick start
 
@@ -73,6 +74,6 @@ save_graph(graph, Path("data/labgraph.sqlite"))
 
 ## Not yet built
 
-- OpenAI extractor implementation (structured outputs)
+- Runtime configuration and ingestion selection for the OpenAI extractor
 - Google Drive ingestion adapter (Week 3)
 - KG-aware retrieval + SUT (Week 4)

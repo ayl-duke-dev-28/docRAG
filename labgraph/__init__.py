@@ -1,5 +1,11 @@
 from .aliases import AliasResolver
-from .extract import Extractor, ExtractionResult, RegexExtractor
+from .extract import (
+    Extractor,
+    ExtractionResult,
+    OpenAIExtractionError,
+    OpenAIExtractor,
+    RegexExtractor,
+)
 from .graph import LabGraph
 from .resolve import resolve_mentions
 from .schema import Entity, EntityKind, Relation, RelationKind, canonical_id, normalize
@@ -12,6 +18,8 @@ __all__ = [
     "ExtractionResult",
     "Extractor",
     "LabGraph",
+    "OpenAIExtractionError",
+    "OpenAIExtractor",
     "QuestionTrace",
     "RegexExtractor",
     "Relation",
