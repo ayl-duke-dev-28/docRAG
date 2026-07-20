@@ -2,10 +2,12 @@ from types import SimpleNamespace
 
 import pytest
 from openai import OpenAIError
+from pydantic import ValidationError
 
 from labgraph.aliases import AliasResolver
 from labgraph.extract import (
     Chunk,
+    ExtractionResult,
     OpenAIExtractionError,
     OpenAIExtractor,
     RegexExtractor,
@@ -205,7 +207,7 @@ def test_openai_extractor_returns_empty_result_for_empty_structured_output():
         Chunk(id="c1", filename="empty.txt", text="Nothing relevant.")
     )
 
-    assert result == OpenAIExtractor.empty_result()
+    assert result == ExtractionResult()
 
 
 @pytest.mark.unit
@@ -237,6 +239,19 @@ def test_openai_extractor_wraps_openai_api_errors():
     client = FakeOpenAIClient(error=OpenAIError("service unavailable"))
 
     with pytest.raises(OpenAIExtractionError, match="request failed.*service unavailable"):
+        OpenAIExtractor(client=client).extract(
+            Chunk(id="c1", filename="a.pdf", text="text")
+        )
+
+
+@pytest.mark.unit
+def test_openai_extractor_wraps_structured_output_validation_errors():
+    with pytest.raises(ValidationError) as exc_info:
+        StructuredExtraction.model_validate({"entities": []})
+
+    client = FakeOpenAIClient(error=exc_info.value)
+
+    with pytest.raises(OpenAIExtractionError, match="invalid structured output"):
         OpenAIExtractor(client=client).extract(
             Chunk(id="c1", filename="a.pdf", text="text")
         )
