@@ -1,13 +1,41 @@
+from types import SimpleNamespace
+
 import pytest
+from openai import OpenAIError
 
 from labgraph.aliases import AliasResolver
 from labgraph.extract import (
     Chunk,
+    OpenAIExtractionError,
     OpenAIExtractor,
     RegexExtractor,
     extract_many,
 )
+from labgraph.extraction_schema import (
+    ExtractionAttribute,
+    ExtractionEntity,
+    ExtractionRelation,
+    StructuredExtraction,
+)
 from labgraph.schema import EntityKind, RelationKind
+
+
+class FakeResponses:
+    def __init__(self, response=None, error=None):
+        self.response = response
+        self.error = error
+        self.calls = []
+
+    def parse(self, **kwargs):
+        self.calls.append(kwargs)
+        if self.error is not None:
+            raise self.error
+        return self.response
+
+
+class FakeOpenAIClient:
+    def __init__(self, response=None, error=None):
+        self.responses = FakeResponses(response=response, error=error)
 
 
 @pytest.mark.unit
@@ -105,6 +133,110 @@ def test_extract_many_deduplicates_entities():
 
 
 @pytest.mark.unit
-def test_openai_extractor_is_stub():
-    with pytest.raises(NotImplementedError):
-        OpenAIExtractor().extract(Chunk(id="c1", filename="a.pdf", text="hi"))
+def test_openai_extractor_requests_structured_output_and_converts_graph_objects():
+    parsed = StructuredExtraction(
+        entities=[
+            ExtractionEntity(
+                key="author",
+                kind=EntityKind.PERSON,
+                name="A. Liu",
+                aliases=["Alex Liu"],
+                attributes=[ExtractionAttribute(key="role", value="author")],
+            ),
+            ExtractionEntity(
+                key="paper",
+                kind=EntityKind.PAPER,
+                name="Training Stability",
+                aliases=[],
+                attributes=[],
+            ),
+        ],
+        relations=[
+            ExtractionRelation(
+                source_key="author",
+                target_key="paper",
+                kind=RelationKind.AUTHORED,
+                attributes=[ExtractionAttribute(key="evidence", value="by A. Liu")],
+            )
+        ],
+    )
+    client = FakeOpenAIClient(response=SimpleNamespace(output_parsed=parsed))
+    aliases = AliasResolver()
+    aliases.add(EntityKind.PERSON, "Alex Liu", ["A. Liu"])
+    chunk = Chunk(
+        id="chunk-7",
+        filename="training_stability.pdf",
+        text="Training Stability was written by A. Liu.",
+    )
+
+    result = OpenAIExtractor(
+        model="gpt-4o-mini", client=client, aliases=aliases
+    ).extract(chunk)
+
+    assert {entity.id for entity in result.entities} == {
+        "person:alex-liu",
+        "paper:training-stability",
+    }
+    person = next(entity for entity in result.entities if entity.kind == EntityKind.PERSON)
+    assert person.aliases == ("Alex Liu",)
+    assert person.as_attrs_dict() == {
+        "role": "author",
+        "source_filename": "training_stability.pdf",
+    }
+    assert result.relations[0].source_id == "person:alex-liu"
+    assert result.relations[0].target_id == "paper:training-stability"
+    assert result.relations[0].provenance == ("chunk-7",)
+    assert result.relations[0].as_attrs_dict() == {"evidence": "by A. Liu"}
+
+    call = client.responses.calls[0]
+    assert call["model"] == "gpt-4o-mini"
+    assert call["text_format"] is StructuredExtraction
+    assert len(call["input"]) == 2
+    assert "training_stability.pdf" in call["input"][1]["content"]
+    assert chunk.text in call["input"][1]["content"]
+
+
+@pytest.mark.unit
+def test_openai_extractor_returns_empty_result_for_empty_structured_output():
+    parsed = StructuredExtraction(entities=[], relations=[])
+    client = FakeOpenAIClient(response=SimpleNamespace(output_parsed=parsed))
+
+    result = OpenAIExtractor(client=client).extract(
+        Chunk(id="c1", filename="empty.txt", text="Nothing relevant.")
+    )
+
+    assert result == OpenAIExtractor.empty_result()
+
+
+@pytest.mark.unit
+def test_openai_extractor_reports_model_refusal():
+    refusal = SimpleNamespace(type="refusal", refusal="I cannot process this text.")
+    response = SimpleNamespace(
+        output_parsed=None,
+        output=[SimpleNamespace(content=[refusal])],
+    )
+
+    with pytest.raises(OpenAIExtractionError, match="refused.*cannot process"):
+        OpenAIExtractor(client=FakeOpenAIClient(response=response)).extract(
+            Chunk(id="c1", filename="a.pdf", text="text")
+        )
+
+
+@pytest.mark.unit
+def test_openai_extractor_rejects_response_without_parsed_output():
+    response = SimpleNamespace(output_parsed=None, output=[])
+
+    with pytest.raises(OpenAIExtractionError, match="no parsed output"):
+        OpenAIExtractor(client=FakeOpenAIClient(response=response)).extract(
+            Chunk(id="c1", filename="a.pdf", text="text")
+        )
+
+
+@pytest.mark.unit
+def test_openai_extractor_wraps_openai_api_errors():
+    client = FakeOpenAIClient(error=OpenAIError("service unavailable"))
+
+    with pytest.raises(OpenAIExtractionError, match="request failed.*service unavailable"):
+        OpenAIExtractor(client=client).extract(
+            Chunk(id="c1", filename="a.pdf", text="text")
+        )
