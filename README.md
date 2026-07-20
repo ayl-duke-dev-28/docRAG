@@ -67,9 +67,10 @@ at query time, and returns both the answer and the path.
 
 ### New: labgraph — the typed knowledge graph (Week 2)
 
-The pure-Python core of the LabGraph pipeline. Ships without any LLM
-dependency so CI can exercise the full extract → build → traverse → persist
-loop on every push.
+The graph core keeps a deterministic offline path, so CI can exercise the full
+extract → build → traverse → persist loop on every push without an API key.
+The optional OpenAI path uses the same extractor contract for real-document
+entity and relation extraction.
 
 - **`labgraph/schema.py`** — the 5-entity / 6-relation contract from the
   design doc, encoded as `EntityKind` and `RelationKind` enums plus frozen
@@ -180,7 +181,8 @@ loop on every push.
 - [x] **Week 1 — Eval harness.** Scoring infrastructure before any KG code.
 - [x] **Week 2 — Extraction + KG builder.** Fixed 5-entity, 6-relation schema.
       NetworkX in memory, persisted to SQLite. Deterministic regex extractor
-      for CI; OpenAI structured-outputs extractor to follow.
+      for CI; the OpenAI structured-output implementation now exists as the
+      Week 2b production path.
 - [ ] **Week 2b — OpenAI extractor.** Replace the regex baseline with a
       structured-outputs LLM call per chunk. Same `Extractor` protocol, no
       pipeline changes downstream. Shipped so far: the strict entity/relation
@@ -236,6 +238,33 @@ OPENAI_API_KEY=your_key_here
 Restart with `docker compose down && docker compose up --build`. If you built
 before pinning the OpenAI dependency, `docker compose build --no-cache` once
 to force a clean install.
+
+The upload pipeline currently selects `RegexExtractor`, even when an API key
+is present. Runtime selection is the remaining Week 2b task. To exercise the
+OpenAI extractor directly with `OPENAI_API_KEY` exported:
+
+```python
+from labgraph import OpenAIExtractor
+from labgraph.extract import Chunk
+
+result = OpenAIExtractor().extract(
+    Chunk(
+        id="paper-1-page-1",
+        filename="training_stability.pdf",
+        text="Alex Liu introduced curriculum learning to stabilize training.",
+    )
+)
+
+for entity in result.entities:
+    print(entity.id, entity.kind.value, entity.name)
+for relation in result.relations:
+    print(relation.source_id, relation.kind.value, relation.target_id)
+```
+
+The response is validated against `StructuredExtraction` before conversion.
+Refusals, invalid structured output, and API failures raise
+`OpenAIExtractionError`; every converted relation records the input chunk ID
+as provenance.
 
 ## Running the eval harness
 
