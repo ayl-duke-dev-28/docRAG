@@ -19,6 +19,9 @@ nodes; the bridge between them is what powers multi-hop.
 
 - **`schema.py`** — enums, frozen dataclasses (`Entity`, `Relation`), and the
   canonical-id function that keeps identifiers stable across ingestions.
+- **`extraction_schema.py`** — strict Pydantic response models for OpenAI
+  structured outputs, including entity-key references and relation endpoint
+  validation before graph canonicalization.
 - **`aliases.py`** — `AliasResolver` reads `labgraph/aliases.yaml` and collapses
   surface forms ("Alex Liu", "A. Liu", "aliu@duke.edu") to a single node id.
 - **`graph.py`** — `LabGraph` wraps `networkx.MultiDiGraph`, exposes
