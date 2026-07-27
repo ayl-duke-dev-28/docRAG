@@ -11,6 +11,13 @@ const formEl = document.querySelector("#query-form");
 const questionEl = document.querySelector("#question");
 const messagesEl = document.querySelector("#messages");
 const modePill = document.querySelector("#mode-pill");
+const driveStatusEl = document.querySelector("#drive-status");
+const driveConnectEl = document.querySelector("#drive-connect");
+const driveBrowseEl = document.querySelector("#drive-browse");
+const driveDisconnectEl = document.querySelector("#drive-disconnect");
+const drivePickerEl = document.querySelector("#drive-picker");
+const driveDocumentsEl = document.querySelector("#drive-documents");
+const driveImportEl = document.querySelector("#drive-import");
 
 let allDocuments = [];
 
@@ -113,6 +120,69 @@ async function loadLabgraphStats() {
     return;
   }
   graphCountEl.textContent = `${stats.entities} entities · ${stats.relations} relations`;
+}
+
+function setDriveActions({ configured, connected }) {
+  driveConnectEl.classList.toggle("hidden", !configured || connected);
+  driveBrowseEl.classList.toggle("hidden", !connected);
+  driveDisconnectEl.classList.toggle("hidden", !connected);
+  if (!connected) drivePickerEl.classList.add("hidden");
+}
+
+async function loadGoogleDriveStatus() {
+  const response = await fetch("/api/google-drive/status");
+  if (!response.ok) {
+    driveStatusEl.textContent = "Connection status unavailable.";
+    return;
+  }
+  const status = await response.json();
+  setDriveActions(status);
+  if (!status.configured) {
+    driveStatusEl.textContent = "Add Google OAuth settings to enable imports.";
+  } else if (!status.connected) {
+    driveStatusEl.textContent = "Not connected.";
+  } else {
+    driveStatusEl.textContent = "Connected · read-only access";
+  }
+}
+
+function renderGoogleDocuments(documents) {
+  if (!documents.length) {
+    driveDocumentsEl.innerHTML = '<p class="meta">No Google Docs found.</p>';
+    driveImportEl.classList.add("hidden");
+    return;
+  }
+  driveImportEl.classList.remove("hidden");
+  driveDocumentsEl.innerHTML = documents.map((document) => `
+    <label class="drive-document">
+      <input type="checkbox" name="drive-document" value="${escapeHtml(document.id)}" />
+      <span>
+        <strong>${escapeHtml(document.name)}</strong>
+        <small>${document.modified_time ? `Updated ${escapeHtml(new Date(document.modified_time).toLocaleString())}` : "Google Doc"}</small>
+      </span>
+    </label>
+  `).join("");
+}
+
+async function loadGoogleDocuments() {
+  drivePickerEl.classList.remove("hidden");
+  driveDocumentsEl.innerHTML = '<p class="meta">Loading Google Docs…</p>';
+  driveImportEl.classList.add("hidden");
+  const response = await fetch("/api/google-drive/documents");
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.detail || "Could not load Google Docs.");
+  renderGoogleDocuments(payload.documents || []);
+}
+
+async function importGoogleDocuments(documentIds) {
+  const response = await fetch("/api/google-drive/import", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ document_ids: documentIds }),
+  });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.detail || "Google Docs import failed.");
+  return payload.results;
 }
 
 async function uploadFiles(files) {
@@ -425,6 +495,67 @@ docSearchEl.addEventListener("input", renderDocuments);
 docTypeEl.addEventListener("change", renderDocuments);
 docSortEl.addEventListener("change", renderDocuments);
 
+driveConnectEl.addEventListener("click", async () => {
+  driveConnectEl.disabled = true;
+  try {
+    const response = await fetch("/api/google-drive/connect");
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.detail || "Could not connect Google Drive.");
+    window.location.assign(payload.authorization_url);
+  } catch (error) {
+    addMessage("assistant", `<p>${escapeHtml(error.message)}</p>`);
+    driveConnectEl.disabled = false;
+  }
+});
+
+driveBrowseEl.addEventListener("click", async () => {
+  try {
+    if (!drivePickerEl.classList.contains("hidden")) {
+      drivePickerEl.classList.add("hidden");
+      return;
+    }
+    await loadGoogleDocuments();
+  } catch (error) {
+    addMessage("assistant", `<p>${escapeHtml(error.message)}</p>`);
+  }
+});
+
+driveDisconnectEl.addEventListener("click", async () => {
+  const response = await fetch("/api/google-drive/connection", { method: "DELETE" });
+  const payload = await response.json();
+  if (!response.ok) {
+    addMessage("assistant", `<p>${escapeHtml(payload.detail || "Disconnect failed.")}</p>`);
+    return;
+  }
+  await loadGoogleDriveStatus();
+});
+
+drivePickerEl.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const documentIds = Array.from(
+    driveDocumentsEl.querySelectorAll('input[name="drive-document"]:checked')
+  ).map((input) => input.value);
+  if (!documentIds.length) {
+    addMessage("assistant", "<p>Select at least one Google Doc to import.</p>");
+    return;
+  }
+  driveImportEl.disabled = true;
+  try {
+    addMessage("assistant", "<p>Importing Google Docs and updating the graph…</p>");
+    const results = await importGoogleDocuments(documentIds);
+    const summary = results.map((result) => {
+      const chunks = result.chunks === null ? "already indexed" : `${result.chunks} chunks`;
+      return `${escapeHtml(result.filename)}: ${chunks}`;
+    }).join("<br>");
+    addMessage("assistant", `<p>${summary}</p>`);
+    await Promise.all([loadDocuments(), loadLabgraphStats(), loadGoogleDocuments()]);
+  } catch (error) {
+    addMessage("assistant", `<p>${escapeHtml(error.message)}</p>`);
+  } finally {
+    driveImportEl.disabled = false;
+  }
+});
+
 documentsEl.addEventListener("click", async (event) => {
   const button = event.target.closest("button[data-action]");
   if (!button) return;
@@ -471,3 +602,10 @@ formEl.addEventListener("submit", async (event) => {
 
 loadDocuments();
 loadLabgraphStats();
+loadGoogleDriveStatus();
+
+const googleDriveResult = new URLSearchParams(window.location.search).get("google_drive");
+if (googleDriveResult === "connected") {
+  window.history.replaceState({}, "", window.location.pathname);
+  addMessage("assistant", "<p>Google Drive connected. Choose Docs to import into LabGraph.</p>");
+}

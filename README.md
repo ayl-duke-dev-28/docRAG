@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/ayl-duke-dev-28/docRAG/actions/workflows/ci.yml/badge.svg)](https://github.com/ayl-duke-dev-28/docRAG/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-130%20passing-brightgreen)](./tests)
+[![Tests](https://img.shields.io/badge/tests-137%20passing-brightgreen)](./tests)
 [![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen)](./labgraph)
 
 > **LabGraph is the current product direction.** It started as **docRAG**, a
@@ -126,7 +126,24 @@ entities and relations with the configured extractor:
   half-ingested document as a duplicate.
 - **Verified offline** — runtime selection, invalid configuration, ingestion
   wiring, and rollback behavior are covered without making network requests.
-  The full suite currently passes **130 tests**.
+  The full suite currently passes **137 tests**.
+
+### New: Google Drive ingestion (Week 3)
+
+- **Read-only OAuth flow** — the corpus panel can connect a Google account
+  with an expiring, one-time OAuth state value and offline refresh access.
+- **Credential safety** — tokens are stored under `LABGRAPH_DATA_DIR`, outside
+  the source tree, with owner-only file permissions. Invalid credentials put
+  the UI back into its reconnect state.
+- **Drive document picker** — connected users can browse their Google Docs,
+  select one or more documents, and import them from the LabGraph workspace.
+- **Docs → chunks → graph** — Google Docs export as plain text and enter the
+  existing Markdown ingestion path, so content-hash dedupe, chunking,
+  embeddings, structured extraction, provenance, and graph persistence behave
+  exactly like local uploads.
+- **Network-free tests** — OAuth state validation and replay rejection,
+  credential persistence, Drive pagination, document export, API endpoints,
+  and ingestion reuse are covered with fake services.
 
 ### New: LabGraph UI foundation
 
@@ -209,7 +226,8 @@ entities and relations with the configured extractor:
       response schema, reference validation, relation-direction checks, the
       Responses API call, canonical conversion, provenance, and refusal/error
       handling, plus configurable runtime ingestion selection.
-- [ ] **Week 3 — Google Drive ingestion.** OAuth flow, Docs → chunks → graph.
+- [x] **Week 3 — Google Drive ingestion.** Read-only OAuth flow, Drive document
+      picker, and Docs → chunks → graph through the shared ingestion pipeline.
 - [ ] **Week 4 — Graph-aware retrieval.** Hybrid vector seed + bounded BFS
       along typed edges. First real eval score against the KG.
 - [ ] **Week 5 — Prompt + retrieval iteration** until eval hits **≥ 15 / 20**.
@@ -290,6 +308,33 @@ The response is validated against `StructuredExtraction` before conversion.
 Refusals, invalid structured output, and API failures raise
 `OpenAIExtractionError`; every converted relation records the input chunk ID
 as provenance.
+
+### Google Drive ingestion
+
+First, enable the Google Drive API and create an OAuth 2.0 **Web application**
+client in Google Cloud. Add this exact authorized redirect URI:
+
+```text
+http://127.0.0.1:8000/api/google-drive/callback
+```
+
+Then add the client credentials to `.env`:
+
+```text
+GOOGLE_CLIENT_ID=your-client-id
+GOOGLE_CLIENT_SECRET=your-client-secret
+GOOGLE_REDIRECT_URI=http://127.0.0.1:8000/api/google-drive/callback
+```
+
+Restart LabGraph, select **Connect** in the Google Drive section, complete
+consent, then choose Docs to import. LabGraph requests the read-only Drive
+scope; stored OAuth credentials live at
+`data/google-drive-credentials.json` by default. The redirect URI must match
+the Google Cloud configuration exactly.
+
+Setup references:
+[Google OAuth for web server applications](https://developers.google.com/identity/protocols/oauth2/web-server)
+and [Google Drive API files](https://developers.google.com/workspace/drive/api/reference/rest/v3/files).
 
 ## Running the eval harness
 
@@ -376,6 +421,7 @@ app.py              FastAPI app + HTML shell
 docrag/             — baseline single-source RAG (shipped)
   config.py         paths and constants
   ingest.py         PDF/TXT/MD → chunks
+  google_drive.py   OAuth + Google Docs listing/export adapter
   storage.py        SQLite + FTS5 index (`data/docrag.sqlite3` legacy filename)
   retrieval.py      hybrid vector + BM25 retrieval (baseline SUT)
   llm.py            OpenAI embeddings + chat wrapper
@@ -396,19 +442,25 @@ labgraph/           — typed knowledge graph (shipped, Week 2)
   resolve.py        question text → entities named in the graph
   trace.py          question → trace, with designed non-found states
   storage.py        SQLite persistence (save_graph / load_graph)
-tests/              — 130 tests
+tests/              — 137 tests
 .github/workflows/
   ci.yml            — pytest + eval schema validation on push/PR
 ```
 
-Not yet built (Weeks 3–6): Google Drive ingestion adapter, KG-aware retrieval
-and its KG SUT, demo video, and public corpus.
+Not yet built (Weeks 4–6): KG-aware retrieval and its KG SUT, demo video, and
+public corpus.
 
 ## API
 
 - `GET /api/health`
 - `GET /api/documents`
 - `POST /api/upload` with multipart field `files`
+- `GET /api/google-drive/status`
+- `GET /api/google-drive/connect`
+- `GET /api/google-drive/callback`
+- `DELETE /api/google-drive/connection`
+- `GET /api/google-drive/documents`
+- `POST /api/google-drive/import` with JSON `{ "document_ids": ["..."] }`
 - `POST /api/query` with JSON `{ "question": "...", "top_k": 6 }` — returns
   `{ answer, sources, mode, trace }`, where `trace` is derived from `question`.
   Trace path nodes include `id`, `kind`, `name`, `aliases`, and `attrs`;

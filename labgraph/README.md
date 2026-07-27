@@ -81,5 +81,4 @@ is selected otherwise. Set the value to `regex` or `openai` to force a mode;
 
 ## Not yet built
 
-- Google Drive ingestion adapter (Week 3)
 - KG-aware retrieval + SUT (Week 4)

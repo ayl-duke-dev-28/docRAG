@@ -1,14 +1,28 @@
 import logging
+import re
 import tempfile
 from pathlib import Path
 from typing import Dict, List, Optional
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from docrag.config import BASE_DIR, LABGRAPH_DB_PATH, UPLOAD_DIR
+from docrag.config import (
+    BASE_DIR,
+    GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET,
+    GOOGLE_CREDENTIALS_PATH,
+    GOOGLE_REDIRECT_URI,
+    LABGRAPH_DB_PATH,
+    UPLOAD_DIR,
+)
+from docrag.google_drive import (
+    CredentialsStore,
+    GoogleDriveConnector,
+    GoogleDriveError,
+)
 from docrag.ingest import ingest_file
 from docrag.retrieval import answer, source
 from docrag.storage import delete_document, get_document, init_db, list_documents, rename_document
@@ -23,6 +37,12 @@ from labgraph.trace import (
 )
 
 logger = logging.getLogger(__name__)
+google_drive_connector = GoogleDriveConnector(
+    client_id=GOOGLE_CLIENT_ID,
+    client_secret=GOOGLE_CLIENT_SECRET,
+    redirect_uri=GOOGLE_REDIRECT_URI,
+    credentials_store=CredentialsStore(GOOGLE_CREDENTIALS_PATH),
+)
 
 MAX_TRACE_DEPTH = 8
 MAX_TOP_K = 12
@@ -38,6 +58,10 @@ class QueryRequest(BaseModel):
 
 class RenameDocumentRequest(BaseModel):
     filename: str
+
+
+class GoogleDriveImportRequest(BaseModel):
+    document_ids: List[str]
 
 
 class QueryTraceRequest(BaseModel):
@@ -66,6 +90,12 @@ def stored_upload_path(stored_path: str) -> Path:
     return path
 
 
+def google_document_filename(name: str) -> str:
+    cleaned = re.sub(r"[/\\\\]+", " - ", name).strip()
+    cleaned = re.sub(r"\s+", " ", cleaned) or "Google Doc"
+    return cleaned if cleaned.lower().endswith(".md") else f"{cleaned}.md"
+
+
 @app.on_event("startup")
 def startup() -> None:
     init_db()
@@ -79,6 +109,107 @@ def index():
 @app.get("/api/documents")
 def documents():
     return [dict(row) for row in list_documents()]
+
+
+@app.get("/api/google-drive/status")
+def google_drive_status():
+    return google_drive_connector.status()
+
+
+@app.get("/api/google-drive/connect")
+def google_drive_connect():
+    try:
+        return {
+            "authorization_url": google_drive_connector.start_authorization()
+        }
+    except GoogleDriveError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.get("/api/google-drive/callback")
+def google_drive_callback(
+    code: Optional[str] = None,
+    state: Optional[str] = None,
+    error: Optional[str] = None,
+):
+    if error:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Google Drive authorization was denied: {error}",
+        )
+    try:
+        google_drive_connector.finish_authorization(
+            code=code or "",
+            state=state or "",
+        )
+    except GoogleDriveError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return RedirectResponse(url="/?google_drive=connected", status_code=303)
+
+
+@app.delete("/api/google-drive/connection")
+def google_drive_disconnect():
+    google_drive_connector.disconnect()
+    return {"status": "disconnected"}
+
+
+@app.get("/api/google-drive/documents")
+def google_drive_documents():
+    try:
+        documents = google_drive_connector.list_documents()
+    except GoogleDriveError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return {"documents": [document.as_dict() for document in documents]}
+
+
+@app.post("/api/google-drive/import")
+def google_drive_import(request: GoogleDriveImportRequest):
+    document_ids = tuple(
+        dict.fromkeys(
+            document_id.strip()
+            for document_id in request.document_ids
+            if document_id.strip()
+        )
+    )
+    if not document_ids:
+        raise HTTPException(
+            status_code=400,
+            detail="Select at least one Google Doc to import.",
+        )
+    if len(document_ids) > 25:
+        raise HTTPException(
+            status_code=400,
+            detail="Import at most 25 Google Docs at a time.",
+        )
+
+    results = []
+    for document_id in document_ids:
+        try:
+            exported = google_drive_connector.download_document(document_id)
+            filename = google_document_filename(exported.document.name)
+            with tempfile.NamedTemporaryFile(
+                mode="w+",
+                encoding="utf-8",
+                delete=True,
+                suffix=".md",
+            ) as temp:
+                temp.write(exported.text)
+                temp.flush()
+                result = ingest_file(Path(temp.name), filename)
+        except GoogleDriveError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        results.append(
+            {
+                **result,
+                "source": {
+                    "provider": "google_drive",
+                    "document_id": exported.document.id,
+                },
+            }
+        )
+    return {"results": results}
 
 
 def entity_to_dict(entity: Entity) -> Dict:

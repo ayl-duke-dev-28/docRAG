@@ -146,7 +146,7 @@ The corpus panel answers: "What can the system currently reason over?"
 
 Required content:
 
-- Upload control for PDF, TXT, Markdown, and eventually Google Docs.
+- Upload control for PDF, TXT, Markdown, and connected Google Docs.
 - Document count.
 - Chunk count when available.
 - Graph entity count.
@@ -264,7 +264,7 @@ Required action:
 Supporting context:
 
 ```text
-PDF, TXT, and Markdown are supported now. Google Docs ingestion is planned.
+PDF, TXT, Markdown, and read-only Google Docs imports are supported now.
 ```
 
 ### No Graph

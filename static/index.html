@@ -23,6 +23,24 @@
           <small>PDF, TXT, or Markdown</small>
         </label>
 
+        <section class="drive-import" aria-label="Google Drive import">
+          <div class="drive-header">
+            <div>
+              <h2>Google Drive</h2>
+              <p id="drive-status" class="meta">Checking connection…</p>
+            </div>
+            <div class="drive-actions">
+              <button id="drive-connect" type="button" class="secondary hidden">Connect</button>
+              <button id="drive-browse" type="button" class="secondary hidden">Choose docs</button>
+              <button id="drive-disconnect" type="button" class="quiet hidden">Disconnect</button>
+            </div>
+          </div>
+          <form id="drive-picker" class="drive-picker hidden">
+            <div id="drive-documents" class="drive-documents"></div>
+            <button id="drive-import" type="submit">Import selected</button>
+          </form>
+        </section>
+
         <section class="graph-status" aria-label="LabGraph status">
           <div>
             <h2>LabGraph</h2>

@@ -115,6 +115,91 @@ h2 {
   font-weight: 700;
 }
 
+.hidden {
+  display: none !important;
+}
+
+.drive-import {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fbfa;
+  padding: 12px;
+}
+
+.drive-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.drive-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.drive-actions button {
+  min-height: 30px;
+  padding: 6px 9px;
+  font-size: 12px;
+}
+
+button.secondary {
+  background: #edf4f2;
+  color: #20524b;
+}
+
+button.quiet {
+  border: 1px solid #cfd9d5;
+  background: #ffffff;
+  color: var(--muted);
+}
+
+.drive-picker,
+.drive-documents {
+  display: grid;
+  gap: 8px;
+}
+
+.drive-documents {
+  max-height: 220px;
+  overflow: auto;
+}
+
+.drive-document {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+  cursor: pointer;
+}
+
+.drive-document input {
+  width: auto;
+  margin-top: 3px;
+}
+
+.drive-document span {
+  display: grid;
+  min-width: 0;
+}
+
+.drive-document strong {
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+
+.drive-document small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
 .graph-status {
   display: flex;
   align-items: center;

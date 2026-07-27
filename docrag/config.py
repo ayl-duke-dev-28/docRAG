@@ -36,6 +36,18 @@ CHAT_MODEL = os.getenv(
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 LABGRAPH_EXTRACTOR = os.getenv("LABGRAPH_EXTRACTOR", "auto")
 LABGRAPH_EXTRACTION_MODEL = os.getenv("LABGRAPH_EXTRACTION_MODEL", CHAT_MODEL)
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
+GOOGLE_REDIRECT_URI = os.getenv(
+    "GOOGLE_REDIRECT_URI",
+    "http://127.0.0.1:8000/api/google-drive/callback",
+)
+GOOGLE_CREDENTIALS_PATH = Path(
+    os.getenv(
+        "GOOGLE_CREDENTIALS_PATH",
+        DATA_DIR / "google-drive-credentials.json",
+    )
+)
 
 CHUNK_WORDS = int(os.getenv("LABGRAPH_CHUNK_WORDS", os.getenv("DOCRAG_CHUNK_WORDS", "420")))
 CHUNK_OVERLAP = int(os.getenv("LABGRAPH_CHUNK_OVERLAP", os.getenv("DOCRAG_CHUNK_OVERLAP", "70")))

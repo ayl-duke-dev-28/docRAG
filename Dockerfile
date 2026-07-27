@@ -11,6 +11,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app.py .
 COPY docrag ./docrag
+COPY labgraph ./labgraph
 COPY static ./static
 
 RUN mkdir -p /app/data/uploads
