@@ -105,6 +105,29 @@ entity and relation extraction.
   section below shows the runnable snippet and its actual output.
 - **60 new tests, 95% coverage on `labgraph/`.**
 
+### New: configurable runtime extraction (Week 2b)
+
+The production upload path now turns every stored document chunk into graph
+entities and relations with the configured extractor:
+
+- **Automatic selection** — `LABGRAPH_EXTRACTOR=auto` uses
+  `OpenAIExtractor` when `OPENAI_API_KEY` is present and `RegexExtractor`
+  otherwise.
+- **Explicit modes** — set `LABGRAPH_EXTRACTOR=regex` for deterministic,
+  network-free ingestion or `LABGRAPH_EXTRACTOR=openai` to require structured
+  extraction. Explicit OpenAI mode fails fast when no API key is configured.
+- **Independent model configuration** — `LABGRAPH_EXTRACTION_MODEL` selects
+  the structured-output model without changing the chat or embedding models.
+- **Existing pipeline contract** — both modes feed the same `Extractor`
+  protocol into `extract_many`, then merge the canonical entities and
+  provenance-backed relations into `data/labgraph.sqlite3`.
+- **Safe failure behavior** — if graph extraction fails, ingestion removes the
+  new document rows and copied upload so retrying does not report a
+  half-ingested document as a duplicate.
+- **Verified offline** — runtime selection, invalid configuration, ingestion
+  wiring, and rollback behavior are covered without making network requests.
+  The full suite currently passes **130 tests**.
+
 ### New: LabGraph UI foundation
 
 - **Runtime identity now says LabGraph** — the FastAPI title, browser title,
@@ -150,10 +173,6 @@ entity and relation extraction.
 - **Graph diagnostics** — each trace now exposes status, matched entities,
   searched endpoints, max depth, returned path size, and the path-selection
   rule.
-- **Runtime graph extraction** — uploads now select the structured OpenAI
-  extractor when an API key is available, with an explicit regex mode for
-  deterministic offline work. Failed graph extraction rolls back the copied
-  file and document rows instead of leaving a half-ingested duplicate.
 
 ### New: continuous integration
 
