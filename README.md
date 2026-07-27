@@ -143,7 +143,8 @@ entities and relations with the configured extractor:
   exactly like local uploads.
 - **Network-free tests** — OAuth state validation and replay rejection,
   credential persistence, Drive pagination, document export, API endpoints,
-  and ingestion reuse are covered with fake services.
+  and ingestion reuse are covered with fake services. See the
+  [Week 3 TDD evidence](docs/testing/google-drive-ingestion.tdd.md).
 
 ### New: LabGraph UI foundation
 
@@ -331,6 +332,17 @@ consent, then choose Docs to import. LabGraph requests the read-only Drive
 scope; stored OAuth credentials live at
 `data/google-drive-credentials.json` by default. The redirect URI must match
 the Google Cloud configuration exactly.
+
+Operational behavior:
+
+- Imports are user-triggered; background Drive synchronization is not included.
+- A batch can contain up to 25 Google Docs.
+- Importing unchanged content returns the existing document as a duplicate.
+  Importing a changed Doc creates a new indexed version.
+- `GOOGLE_CREDENTIALS_PATH` can override the credential-file location.
+- **Disconnect** deletes LabGraph's local credentials. It does not revoke the
+  Google account grant; revoke that separately from the Google account if
+  required.
 
 Setup references:
 [Google OAuth for web server applications](https://developers.google.com/identity/protocols/oauth2/web-server)
