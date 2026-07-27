@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from labgraph.extract import RegexExtractor
 from labgraph.storage import load_graph, save_graph
 from tests.conftest import build_seed_graph as _seed_graph
 
@@ -266,6 +267,11 @@ def test_txt_ingestion_updates_labgraph_database(
     monkeypatch.setattr(ingest_module, "UPLOAD_DIR", uploads_path)
     monkeypatch.setattr(ingest_module, "LABGRAPH_DB_PATH", graph_path, raising=False)
     monkeypatch.setattr(ingest_module, "embed_texts", lambda texts: [])
+    monkeypatch.setattr(
+        ingest_module,
+        "build_labgraph_extractor",
+        lambda: RegexExtractor(),
+    )
     storage_module.init_db()
 
     source = tmp_path / "note.txt"
@@ -289,3 +295,75 @@ def test_txt_ingestion_updates_labgraph_database(
         "method:curriculum-learning",
         "decision:march-team-sync",
     ]
+
+
+@pytest.mark.integration
+def test_ingestion_uses_the_runtime_selected_extractor(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    import docrag.ingest as ingest_module
+    import docrag.storage as storage_module
+
+    docrag_path = tmp_path / "docrag.sqlite3"
+    graph_path = tmp_path / "labgraph.sqlite3"
+    uploads_path = tmp_path / "uploads"
+    uploads_path.mkdir()
+    selected = []
+
+    def select_extractor():
+        selected.append(True)
+        return RegexExtractor()
+
+    monkeypatch.setattr(storage_module, "DB_PATH", docrag_path)
+    monkeypatch.setattr(ingest_module, "UPLOAD_DIR", uploads_path)
+    monkeypatch.setattr(ingest_module, "LABGRAPH_DB_PATH", graph_path, raising=False)
+    monkeypatch.setattr(ingest_module, "embed_texts", lambda texts: [])
+    monkeypatch.setattr(ingest_module, "build_labgraph_extractor", select_extractor)
+    storage_module.init_db()
+
+    source = tmp_path / "note.txt"
+    source.write_text("Alex Liu introduced curriculum learning.")
+
+    ingest_module.ingest_file(source, "training_stability_2024.txt")
+
+    assert selected == [True]
+
+
+@pytest.mark.integration
+def test_ingestion_rolls_back_when_graph_extraction_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    import docrag.ingest as ingest_module
+    import docrag.storage as storage_module
+    from labgraph.extract import OpenAIExtractionError
+
+    class FailingExtractor:
+        name = "openai"
+
+        def extract(self, chunk):
+            raise OpenAIExtractionError("request failed")
+
+    docrag_path = tmp_path / "docrag.sqlite3"
+    graph_path = tmp_path / "labgraph.sqlite3"
+    uploads_path = tmp_path / "uploads"
+    uploads_path.mkdir()
+
+    monkeypatch.setattr(storage_module, "DB_PATH", docrag_path)
+    monkeypatch.setattr(ingest_module, "UPLOAD_DIR", uploads_path)
+    monkeypatch.setattr(ingest_module, "LABGRAPH_DB_PATH", graph_path, raising=False)
+    monkeypatch.setattr(ingest_module, "embed_texts", lambda texts: [])
+    monkeypatch.setattr(
+        ingest_module,
+        "build_labgraph_extractor",
+        lambda: FailingExtractor(),
+    )
+    storage_module.init_db()
+
+    source = tmp_path / "note.txt"
+    source.write_text("Alex Liu introduced curriculum learning.")
+
+    with pytest.raises(ValueError, match="Graph extraction failed"):
+        ingest_module.ingest_file(source, "training_stability_2024.txt")
+
+    assert storage_module.list_documents() == []
+    assert list(uploads_path.iterdir()) == []

@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/ayl-duke-dev-28/docRAG/actions/workflows/ci.yml/badge.svg)](https://github.com/ayl-duke-dev-28/docRAG/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-122%20passing-brightgreen)](./tests)
+[![Tests](https://img.shields.io/badge/tests-130%20passing-brightgreen)](./tests)
 [![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen)](./labgraph)
 
 > **LabGraph is the current product direction.** It started as **docRAG**, a
@@ -150,9 +150,10 @@ entity and relation extraction.
 - **Graph diagnostics** — each trace now exposes status, matched entities,
   searched endpoints, max depth, returned path size, and the path-selection
   rule.
-- **Next UI slice** — move from trace presentation to the next backend
-  milestone: select the OpenAI extractor through configuration and use it in
-  the document-ingestion pipeline when an API key is available.
+- **Runtime graph extraction** — uploads now select the structured OpenAI
+  extractor when an API key is available, with an explicit regex mode for
+  deterministic offline work. Failed graph extraction rolls back the copied
+  file and document rows instead of leaving a half-ingested duplicate.
 
 ### New: continuous integration
 
@@ -183,12 +184,12 @@ entity and relation extraction.
       NetworkX in memory, persisted to SQLite. Deterministic regex extractor
       for CI; the OpenAI structured-output implementation now exists as the
       Week 2b production path.
-- [ ] **Week 2b — OpenAI extractor.** Replace the regex baseline with a
+- [x] **Week 2b — OpenAI extractor.** Replace the regex baseline with a
       structured-outputs LLM call per chunk. Same `Extractor` protocol, no
-      pipeline changes downstream. Shipped so far: the strict entity/relation
+      pipeline changes downstream. Includes the strict entity/relation
       response schema, reference validation, relation-direction checks, the
       Responses API call, canonical conversion, provenance, and refusal/error
-      handling. Runtime ingestion selection remains.
+      handling, plus configurable runtime ingestion selection.
 - [ ] **Week 3 — Google Drive ingestion.** OAuth flow, Docs → chunks → graph.
 - [ ] **Week 4 — Graph-aware retrieval.** Hybrid vector seed + bounded BFS
       along typed edges. First real eval score against the KG.
@@ -227,21 +228,26 @@ scripts\start.bat
 
 ### LLM mode (optional)
 
-Without an API key, LabGraph uses SQLite full-text search and returns the most
-relevant passages directly. For synthesized answers and semantic embeddings,
-edit `.env`:
+Without an API key, LabGraph uses SQLite full-text search, returns the most
+relevant passages directly, and builds its graph with the deterministic regex
+extractor. To enable synthesized answers, semantic embeddings, and structured
+graph extraction, edit `.env`:
 
 ```text
 OPENAI_API_KEY=your_key_here
+LABGRAPH_EXTRACTOR=auto
+LABGRAPH_EXTRACTION_MODEL=gpt-4o-mini
 ```
+
+`LABGRAPH_EXTRACTOR` accepts `auto`, `regex`, or `openai`. The default `auto`
+uses OpenAI when `OPENAI_API_KEY` is set and regex otherwise. Use `regex` to
+force network-free ingestion; explicit `openai` mode fails fast without a key.
 
 Restart with `docker compose down && docker compose up --build`. If you built
 before pinning the OpenAI dependency, `docker compose build --no-cache` once
 to force a clean install.
 
-The upload pipeline currently selects `RegexExtractor`, even when an API key
-is present. Runtime selection is the remaining Week 2b task. To exercise the
-OpenAI extractor directly with `OPENAI_API_KEY` exported:
+To exercise the OpenAI extractor directly with `OPENAI_API_KEY` exported:
 
 ```python
 from labgraph import OpenAIExtractor
@@ -341,9 +347,8 @@ The second question is the other half of the proof. It names nothing in the
 graph, so it gets `no_entities` rather than a path. A trace that appears no
 matter what you ask is decoration; one that can come back empty is evidence.
 
-Once the OpenAI extractor is selected by runtime ingestion and KG-aware
-retrieval lands (Weeks 2b + 4), the same traversal runs on real lab documents
-against the eval set.
+Once KG-aware retrieval lands in Week 4, the same traversal will run against
+the eval set over graphs extracted from real lab documents.
 
 ## Architecture
 
@@ -372,13 +377,13 @@ labgraph/           — typed knowledge graph (shipped, Week 2)
   resolve.py        question text → entities named in the graph
   trace.py          question → trace, with designed non-found states
   storage.py        SQLite persistence (save_graph / load_graph)
-tests/              — 122 tests, 95% combined coverage
+tests/              — 130 tests
 .github/workflows/
   ci.yml            — pytest + eval schema validation on push/PR
 ```
 
-Not yet built (Weeks 2b–6): runtime OpenAI extractor selection, Google Drive
-ingestion adapter, KG-aware retrieval + KG SUT, demo video, and public corpus.
+Not yet built (Weeks 3–6): Google Drive ingestion adapter, KG-aware retrieval
+and its KG SUT, demo video, and public corpus.
 
 ## API
 

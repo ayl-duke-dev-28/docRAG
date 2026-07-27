@@ -8,6 +8,8 @@ services:
     environment:
       LABGRAPH_EMBEDDING_MODEL: ${LABGRAPH_EMBEDDING_MODEL:-text-embedding-3-small}
       LABGRAPH_CHAT_MODEL: ${LABGRAPH_CHAT_MODEL:-gpt-4o-mini}
+      LABGRAPH_EXTRACTOR: ${LABGRAPH_EXTRACTOR:-auto}
+      LABGRAPH_EXTRACTION_MODEL: ${LABGRAPH_EXTRACTION_MODEL:-gpt-4o-mini}
       LABGRAPH_DATA_DIR: /app/data
     volumes:
       - ./data:/app/data

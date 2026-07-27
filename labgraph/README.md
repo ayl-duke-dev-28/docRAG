@@ -72,8 +72,14 @@ for relation in result.relations:
 save_graph(graph, Path("data/labgraph.sqlite"))
 ```
 
+## Runtime selection
+
+Document uploads use `LABGRAPH_EXTRACTOR=auto` by default: the OpenAI
+extractor is selected when `OPENAI_API_KEY` is present and the regex extractor
+is selected otherwise. Set the value to `regex` or `openai` to force a mode;
+`LABGRAPH_EXTRACTION_MODEL` configures the structured-output model.
+
 ## Not yet built
 
-- Runtime configuration and ingestion selection for the OpenAI extractor
 - Google Drive ingestion adapter (Week 3)
 - KG-aware retrieval + SUT (Week 4)

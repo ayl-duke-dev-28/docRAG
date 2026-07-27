@@ -223,9 +223,10 @@ class OpenAIExtractor:
         model: str = "gpt-4o-mini",
         client: Optional[Any] = None,
         aliases: Optional[AliasResolver] = None,
+        api_key: Optional[str] = None,
     ) -> None:
         self.model = model
-        self._client = client if client is not None else OpenAI()
+        self._client = client if client is not None else OpenAI(api_key=api_key)
         self._aliases = aliases or AliasResolver()
 
     def extract(self, chunk: Chunk) -> ExtractionResult:

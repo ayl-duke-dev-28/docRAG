@@ -2,20 +2,74 @@ import hashlib
 import re
 import shutil
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from pypdf import PdfReader
 
 from labgraph.aliases import AliasResolver
-from labgraph.extract import Chunk, RegexExtractor, extract_many
+from labgraph.extract import (
+    Chunk,
+    Extractor,
+    OpenAIExtractor,
+    RegexExtractor,
+    extract_many,
+)
 from labgraph.storage import load_graph, save_graph
 
-from .config import BASE_DIR, CHUNK_OVERLAP, CHUNK_WORDS, LABGRAPH_DB_PATH, UPLOAD_DIR
+from .config import (
+    BASE_DIR,
+    CHUNK_OVERLAP,
+    CHUNK_WORDS,
+    LABGRAPH_DB_PATH,
+    LABGRAPH_EXTRACTION_MODEL,
+    LABGRAPH_EXTRACTOR,
+    OPENAI_API_KEY,
+    UPLOAD_DIR,
+)
 from .llm import LLMError, embed_texts
-from .storage import add_chunks, chunks_for_document, create_document, document_by_hash
+from .storage import (
+    add_chunks,
+    chunks_for_document,
+    create_document,
+    delete_document,
+    document_by_hash,
+)
 
 
 WHITESPACE_RE = re.compile(r"\s+")
+
+
+def build_labgraph_extractor(
+    *,
+    mode: str = LABGRAPH_EXTRACTOR,
+    api_key: str = OPENAI_API_KEY,
+    model: str = LABGRAPH_EXTRACTION_MODEL,
+    aliases: Optional[AliasResolver] = None,
+) -> Extractor:
+    """Build the configured graph extractor without making a network call."""
+    selected = mode.strip().lower()
+    if selected not in {"auto", "regex", "openai"}:
+        raise ValueError(
+            "LABGRAPH_EXTRACTOR must be one of: auto, regex, openai."
+        )
+    if selected == "auto":
+        selected = "openai" if api_key.strip() else "regex"
+
+    if aliases is None:
+        alias_path = BASE_DIR / "labgraph" / "aliases.yaml"
+        aliases = (
+            AliasResolver.from_yaml(alias_path)
+            if alias_path.exists()
+            else AliasResolver()
+        )
+
+    if selected == "regex":
+        return RegexExtractor(aliases=aliases)
+    if not api_key.strip():
+        raise ValueError(
+            "LABGRAPH_EXTRACTOR=openai requires OPENAI_API_KEY."
+        )
+    return OpenAIExtractor(model=model, aliases=aliases, api_key=api_key)
 
 
 def sha256_file(path: Path) -> str:
@@ -103,7 +157,13 @@ def ingest_file(temp_path: Path, original_filename: str) -> Dict:
 
     document_id = create_document(original_filename, stored_path, content_hash, len(pages))
     add_chunks(document_id, original_filename, chunks)
-    update_labgraph_for_document(document_id)
+    try:
+        update_labgraph_for_document(document_id)
+    except Exception as exc:
+        delete_document(document_id)
+        if stored_path.exists():
+            stored_path.unlink()
+        raise ValueError(f"Graph extraction failed: {exc}") from exc
 
     return {
         "status": "ingested",
@@ -118,9 +178,7 @@ def update_labgraph_for_document(document_id: int) -> None:
     if not rows:
         return
 
-    alias_path = BASE_DIR / "labgraph" / "aliases.yaml"
-    aliases = AliasResolver.from_yaml(alias_path) if alias_path.exists() else AliasResolver()
-    extractor = RegexExtractor(aliases=aliases)
+    extractor = build_labgraph_extractor()
     result = extract_many(
         extractor,
         [
