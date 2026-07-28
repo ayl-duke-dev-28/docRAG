@@ -1,11 +1,14 @@
 import json
 import math
 import re
-from typing import Dict, List
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 from .config import TOP_K
 from .llm import LLMError, answer_with_context, embed_texts
 from .storage import all_embedded_chunks, get_chunk, search_fts
+
+if TYPE_CHECKING:
+    from labgraph.graph import LabGraph
 
 
 FTS_TOKEN_RE = re.compile(r"[A-Za-z0-9_]+")
@@ -72,8 +75,56 @@ def retrieve(question: str, top_k: int = TOP_K) -> List[Dict]:
     return sources
 
 
-def answer(question: str, top_k: int = TOP_K) -> Dict:
-    sources = retrieve(question, top_k)
+def retrieve_graph_aware(
+    question: str, graph: "LabGraph", top_k: int = TOP_K
+) -> List[Dict]:
+    """Combine baseline retrieval with evidence from the question's graph path.
+
+    Relation provenance is ordered along the bounded path and placed before
+    baseline results. Duplicate chunks are returned once. If the question does
+    not resolve to a complete path, behavior stays identical to the baseline.
+    """
+    from labgraph.trace import TraceStatus, trace_for_question
+
+    baseline = retrieve(question, top_k)
+    trace = trace_for_question(graph, question)
+    if trace.status is not TraceStatus.FOUND:
+        return baseline
+
+    sources: List[Dict] = []
+    seen_chunk_ids = set()
+    for relation in trace.relations:
+        for raw_chunk_id in relation.provenance:
+            try:
+                chunk_id = int(raw_chunk_id)
+                row = get_chunk(chunk_id)
+            except (TypeError, ValueError):
+                continue
+            if row is None or chunk_id in seen_chunk_ids:
+                continue
+            sources.append(row_to_source(row, 1.0))
+            seen_chunk_ids.add(chunk_id)
+
+    for source_item in baseline:
+        chunk_id = source_item.get("chunk_id")
+        if chunk_id in seen_chunk_ids:
+            continue
+        sources.append(source_item)
+        seen_chunk_ids.add(chunk_id)
+
+    return sources[:top_k]
+
+
+def answer(
+    question: str,
+    top_k: int = TOP_K,
+    graph: Optional["LabGraph"] = None,
+) -> Dict:
+    sources = (
+        retrieve_graph_aware(question, graph, top_k)
+        if graph is not None
+        else retrieve(question, top_k)
+    )
     if not sources:
         return {
             "answer": "I could not find matching passages in the uploaded papers.",

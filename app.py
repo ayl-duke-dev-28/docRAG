@@ -255,14 +255,15 @@ def trace_to_dict(result: QuestionTrace) -> Dict:
     }
 
 
-def question_trace(question: str) -> Dict:
+def question_trace(question: str, graph=None) -> Dict:
     """Build the trace for a question, degrading to an error state.
 
     A graph failure must never cost the user an answer that retrieval already
     produced, so this reports the failure in the trace instead of raising.
     """
     try:
-        graph = load_graph(LABGRAPH_DB_PATH)
+        if graph is None:
+            graph = load_graph(LABGRAPH_DB_PATH)
         return trace_to_dict(trace_for_question(graph, question))
     except Exception:
         logger.exception("Graph trace failed for question")
@@ -388,8 +389,17 @@ def query(request: QueryRequest):
     question = request.question.strip()
     if not question:
         raise HTTPException(status_code=400, detail="Question is required.")
-    result = answer(question, max(1, min(request.top_k, MAX_TOP_K)))
-    return {**result, "trace": question_trace(question)}
+    top_k = max(1, min(request.top_k, MAX_TOP_K))
+    try:
+        graph = load_graph(LABGRAPH_DB_PATH)
+    except Exception:
+        logger.exception("Graph load failed for question")
+        result = answer(question, top_k)
+        trace = trace_to_dict(QuestionTrace(status=TraceStatus.ERROR))
+    else:
+        result = answer(question, top_k, graph=graph)
+        trace = question_trace(question, graph)
+    return {**result, "trace": trace}
 
 
 @app.get("/api/source/{chunk_id}")

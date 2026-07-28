@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/ayl-duke-dev-28/docRAG/actions/workflows/ci.yml/badge.svg)](https://github.com/ayl-duke-dev-28/docRAG/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-137%20passing-brightgreen)](./tests)
+[![Tests](https://img.shields.io/badge/tests-140%20passing-brightgreen)](./tests)
 [![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen)](./labgraph)
 
 > **LabGraph is the current product direction.** It started as **docRAG**, a
@@ -230,7 +230,10 @@ entities and relations with the configured extractor:
 - [x] **Week 3 — Google Drive ingestion.** Read-only OAuth flow, Drive document
       picker, and Docs → chunks → graph through the shared ingestion pipeline.
 - [ ] **Week 4 — Graph-aware retrieval.** Hybrid vector seed + bounded BFS
-      along typed edges. First real eval score against the KG.
+      along typed edges. First real eval score against the KG. Shipped so far:
+      answer context prioritizes the provenance chunks along a question-derived
+      bounded graph path, deduplicates them against baseline vector/FTS
+      results, and falls back unchanged when no graph path is found.
 - [ ] **Week 5 — Prompt + retrieval iteration** until eval hits **≥ 15 / 20**.
       Trace visualization in the UI. Shipped so far: the LabGraph chrome pass,
       the trace component, relation labels, entity-kind chips,
