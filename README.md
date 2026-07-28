@@ -126,7 +126,7 @@ entities and relations with the configured extractor:
   half-ingested document as a duplicate.
 - **Verified offline** — runtime selection, invalid configuration, ingestion
   wiring, and rollback behavior are covered without making network requests.
-  The full suite currently passes **137 tests**.
+  The full suite currently passes **140 tests**.
 
 ### New: Google Drive ingestion (Week 3)
 
@@ -174,10 +174,8 @@ entities and relations with the configured extractor:
   returns the trace alongside the answer. Previously the UI fetched a trace in
   a separate call that ignored the question and returned the first
   person→decision path in the graph, so every answer showed the same path.
-  An answer and its trace can no longer disagree. Note the scope: the *trace*
-  now walks the graph from entities named in the question, but the *answer*
-  text still comes from the legacy retrieval baseline. Graph-aware retrieval
-  is still Week 4.
+  An answer and its trace can no longer disagree. The first graph-aware
+  retrieval slice now also uses this path to select answer context.
 - **Designed trace states** — when the question can't be connected to the
   graph, the trace region says which state it's in and what to do next:
   `no_graph`, `no_entities` (nothing in the question matched), `partial` (one
@@ -191,6 +189,35 @@ entities and relations with the configured extractor:
 - **Graph diagnostics** — each trace now exposes status, matched entities,
   searched endpoints, max depth, returned path size, and the path-selection
   rule.
+
+### New: graph-aware retrieval foundation (Week 4)
+
+`/api/query` now loads the persisted graph once and uses that same snapshot for
+both answer retrieval and the visible trace:
+
+- **Baseline seed retrieval** — the existing semantic-vector path remains the
+  first retrieval step when embeddings are available, with FTS/BM25 as its
+  network-free fallback.
+- **Bounded graph traversal** — entities named in the question are resolved
+  against the graph, then connected through the existing depth-bounded typed
+  path search.
+- **Provenance expansion** — chunk IDs attached to relations along the selected
+  path are loaded as answer context and placed ahead of baseline-only results.
+  This lets evidence from both sides of a multi-hop path survive the initial
+  retrieval ranking.
+- **Stable deduplication and limit** — a provenance chunk that was already
+  returned by vector/FTS retrieval appears once, and the combined result still
+  respects `top_k`.
+- **Honest fallback** — questions with no complete graph path return the
+  baseline sources unchanged. If the graph cannot be loaded, the answer is
+  preserved and the trace reports its existing `error` state.
+- **One graph snapshot per query** — answer context and trace generation reuse
+  the same loaded graph, preventing them from observing different graph state
+  during one request.
+- **TDD coverage** — focused unit and API integration tests cover ordering,
+  deduplication, unrelated-question fallback, shared graph use, and graph-load
+  failure. See the
+  [graph-aware retrieval TDD evidence](docs/testing/graph-aware-retrieval.tdd.md).
 
 ### New: continuous integration
 
@@ -426,8 +453,10 @@ The second question is the other half of the proof. It names nothing in the
 graph, so it gets `no_entities` rather than a path. A trace that appears no
 matter what you ask is decoration; one that can come back empty is evidence.
 
-Once KG-aware retrieval lands in Week 4, the same traversal will run against
-the eval set over graphs extracted from real lab documents.
+The first Week 4 retrieval slice now uses this traversal to promote the
+relations' provenance chunks into answer context. Vector-seeded entity
+discovery, a dedicated KG SUT, and the first score over the real eval corpus
+remain the next steps.
 
 ## Architecture
 
@@ -438,7 +467,7 @@ docrag/             — baseline single-source RAG (shipped)
   ingest.py         PDF/TXT/MD → chunks
   google_drive.py   OAuth + Google Docs listing/export adapter
   storage.py        SQLite + FTS5 index (`data/docrag.sqlite3` legacy filename)
-  retrieval.py      hybrid vector + BM25 retrieval (baseline SUT)
+  retrieval.py      vector/FTS seeds + graph-provenance context expansion
   llm.py            OpenAI embeddings + chat wrapper
 evals/              — eval harness (shipped, Week 1)
   schema.py         Question / Answer / QuestionResult dataclasses
@@ -457,13 +486,13 @@ labgraph/           — typed knowledge graph (shipped, Week 2)
   resolve.py        question text → entities named in the graph
   trace.py          question → trace, with designed non-found states
   storage.py        SQLite persistence (save_graph / load_graph)
-tests/              — 137 tests
+tests/              — 140 tests
 .github/workflows/
   ci.yml            — pytest + eval schema validation on push/PR
 ```
 
-Not yet built (Weeks 4–6): KG-aware retrieval and its KG SUT, demo video, and
-public corpus.
+Not yet built (remaining Weeks 4–6): vector-seeded entity discovery, a
+dedicated KG SUT and first KG eval score, demo video, and public corpus.
 
 ## API
 
@@ -478,6 +507,9 @@ public corpus.
 - `POST /api/google-drive/import` with JSON `{ "document_ids": ["..."] }`
 - `POST /api/query` with JSON `{ "question": "...", "top_k": 6 }` — returns
   `{ answer, sources, mode, trace }`, where `trace` is derived from `question`.
+  When a bounded graph path is found, relation-provenance chunks are
+  prioritized in `sources`, deduplicated against vector/FTS results, and
+  capped at `top_k`; otherwise retrieval falls back unchanged.
   Trace path nodes include `id`, `kind`, `name`, `aliases`, and `attrs`;
   relation provenance uses chunk IDs, which the UI uses to label which sources
   support graph nodes or edges.
