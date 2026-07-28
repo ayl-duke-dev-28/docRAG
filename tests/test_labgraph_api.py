@@ -142,9 +142,39 @@ def _client_with_graph(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestC
     monkeypatch.setattr(
         app_module,
         "answer",
-        lambda question, top_k: {"answer": "stub answer", "sources": [], "mode": "none"},
+        lambda question, top_k, **kwargs: {
+            "answer": "stub answer",
+            "sources": [],
+            "mode": "none",
+        },
     )
     return TestClient(app_module.app)
+
+
+@pytest.mark.integration
+def test_query_endpoint_uses_the_loaded_graph_for_answering(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    import app as app_module
+
+    client = _client_with_graph(tmp_path, monkeypatch)
+    received = {}
+
+    def graph_aware_answer(question, top_k, graph=None):
+        received["graph"] = graph
+        return {"answer": "graph-aware answer", "sources": [], "mode": "none"}
+
+    monkeypatch.setattr(app_module, "answer", graph_aware_answer)
+
+    response = client.post(
+        "/api/query",
+        json={"question": "What did Alex Liu contribute to the March team sync?"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["answer"] == "graph-aware answer"
+    assert received["graph"] is not None
+    assert received["graph"].entity_count == 4
 
 
 @pytest.mark.integration
