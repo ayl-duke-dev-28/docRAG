@@ -5,7 +5,7 @@ import pytest
 
 from evals.runner import main, run_eval
 from evals.schema import Answer, ExpectedSource, Question
-from evals.sut import NullSUT, get_sut
+from evals.sut import LabGraphGraphAwareSUT, NullSUT, get_sut
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -26,6 +26,52 @@ class StubSUT:
 def test_get_sut_null():
     assert get_sut("null").name == "null"
     assert get_sut("none").name == "null"
+
+
+@pytest.mark.unit
+def test_get_sut_graph():
+    assert get_sut("graph").name == "labgraph-graph-aware"
+
+
+@pytest.mark.unit
+def test_graph_sut_loads_the_graph_for_answering(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+):
+    import docrag.retrieval as retrieval_module
+    import labgraph.storage as graph_storage
+
+    expected_graph = object()
+    received = {}
+    graph_path = tmp_path / "labgraph.sqlite3"
+
+    monkeypatch.setattr(
+        graph_storage,
+        "load_graph",
+        lambda path: expected_graph if path == graph_path else None,
+    )
+
+    def graph_answer(question, top_k, graph=None):
+        received.update(question=question, top_k=top_k, graph=graph)
+        return {
+            "answer": "Curriculum learning came from the March sync.",
+            "sources": [{"filename": "paper.pdf"}, {"filename": "notes.md"}],
+        }
+
+    monkeypatch.setattr(retrieval_module, "answer", graph_answer)
+
+    result = LabGraphGraphAwareSUT(top_k=3, graph_path=graph_path).run(
+        "Where did curriculum learning come from?"
+    )
+
+    assert received == {
+        "question": "Where did curriculum learning come from?",
+        "top_k": 3,
+        "graph": expected_graph,
+    }
+    assert result == Answer(
+        text="Curriculum learning came from the March sync.",
+        sources=("paper.pdf", "notes.md"),
+    )
 
 
 @pytest.mark.unit

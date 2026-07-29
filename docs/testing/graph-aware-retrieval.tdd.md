@@ -34,3 +34,22 @@ item, Week 4 graph-aware retrieval:
 This is the first bounded Week 4 slice. The graph path is resolved from entity
 mentions in the question; vector-seeded entity discovery and the first KG eval
 score remain follow-up work.
+
+## Follow-up: graph-aware eval SUT
+
+The next small slice added `LabGraphGraphAwareSUT`, selectable with
+`python -m evals.runner --sut graph`.
+
+| Guarantee | Test | Type | Result |
+|---|---|---|---|
+| The `graph` alias selects the graph-aware SUT. | `test_get_sut_graph` | Unit | PASS |
+| The SUT loads the configured graph and passes it, the question, and `top_k` into `answer()`, preserving answer text and source filenames. | `test_graph_sut_loads_the_graph_for_answering` | Unit | PASS |
+
+- **RED:** `.venv/bin/pytest -q tests/test_evals_runner.py` failed during
+  collection because `LabGraphGraphAwareSUT` did not exist.
+- **GREEN:** the same command completed with `9 passed`.
+- **Full suite and coverage:**
+  `COVERAGE_FILE=/tmp/docrag_graph_sut_coverage .venv/bin/pytest -q --cov=evals.sut --cov-report=term-missing`
+  — `142 passed`; `evals/sut.py` coverage `85%`.
+- **Checkpoint note:** the workspace grants read-only access to `.git`, so
+  RED/GREEN checkpoint commits could not be created for this follow-up.

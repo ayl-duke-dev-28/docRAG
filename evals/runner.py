@@ -46,7 +46,10 @@ def _parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument(
         "--sut",
         default="null",
-        help="Name of the System Under Test: 'null' (dry-run) or 'baseline' (LabGraph legacy retrieval).",
+        help=(
+            "System Under Test: 'null' (dry-run), 'baseline' (legacy retrieval), "
+            "or 'graph' (graph-aware retrieval)."
+        ),
     )
     parser.add_argument(
         "--output-md",

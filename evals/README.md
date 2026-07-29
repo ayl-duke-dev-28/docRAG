@@ -40,12 +40,15 @@ python -m evals.runner --questions evals/questions.yaml --sut null
 # run against the current LabGraph legacy retrieval baseline (needs a populated SQLite DB)
 python -m evals.runner --sut baseline --output-md evals/reports/latest.md
 
+# run graph-aware retrieval (needs docrag.sqlite3 and labgraph.sqlite3)
+python -m evals.runner --sut graph --output-md evals/reports/graph.md
+
 # fail CI when the pass rate drops
 python -m evals.runner --sut baseline --min-pass-rate 0.75
 ```
 
-## Adding the KG SUT later
+## System Under Test adapters
 
-`evals/sut.py` declares a `SystemUnderTest` protocol. Add a `KGGraphSUT` class
-that implements `run(question) -> Answer`, register it in `get_sut`, and the
-harness will score it without any other changes.
+`evals/sut.py` declares a `SystemUnderTest` protocol and ships three adapters:
+`null` for harness checks, `baseline` for legacy vector/FTS retrieval, and
+`graph` for graph-aware provenance expansion.

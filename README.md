@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/ayl-duke-dev-28/docRAG/actions/workflows/ci.yml/badge.svg)](https://github.com/ayl-duke-dev-28/docRAG/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-140%20passing-brightgreen)](./tests)
+[![Tests](https://img.shields.io/badge/tests-142%20passing-brightgreen)](./tests)
 [![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen)](./labgraph)
 
 > **LabGraph is the current product direction.** It started as **docRAG**, a
@@ -57,7 +57,8 @@ at query time, and returns both the answer and the path.
   spans ≥ `min_distinct_sources` distinct filenames. No LLM judge.
 - **Pluggable System Under Test** — `evals/sut.py` declares a `SystemUnderTest`
   protocol. `NullSUT` for dry-runs, `LabGraphBaselineSUT` wraps the current
-  legacy retrieval path. The KG SUT plugs in later with zero harness changes.
+  legacy retrieval path, and `LabGraphGraphAwareSUT` scores the graph-aware
+  answer path with `--sut graph`.
 - **CLI runner** — `python -m evals.runner` with `--sut`, `--output-md`,
   `--output-json`, `--min-pass-rate` (returns exit 1 in CI when the score
   drops).
@@ -126,7 +127,7 @@ entities and relations with the configured extractor:
   half-ingested document as a duplicate.
 - **Verified offline** — runtime selection, invalid configuration, ingestion
   wiring, and rollback behavior are covered without making network requests.
-  The full suite currently passes **140 tests**.
+  The full suite currently passes **142 tests**.
 
 ### New: Google Drive ingestion (Week 3)
 
@@ -390,6 +391,9 @@ python -m evals.runner --questions evals/questions.yaml --sut null
 # score the current LabGraph legacy retrieval baseline (needs a populated SQLite DB)
 python -m evals.runner --sut baseline --output-md evals/reports/latest.md
 
+# score graph-aware retrieval against the same questions (needs both SQLite DBs)
+python -m evals.runner --sut graph --output-md evals/reports/graph.md
+
 # CI: fail when pass rate drops below 75%
 python -m evals.runner --sut baseline --min-pass-rate 0.75
 
@@ -454,9 +458,9 @@ graph, so it gets `no_entities` rather than a path. A trace that appears no
 matter what you ask is decoration; one that can come back empty is evidence.
 
 The first Week 4 retrieval slice now uses this traversal to promote the
-relations' provenance chunks into answer context. Vector-seeded entity
-discovery, a dedicated KG SUT, and the first score over the real eval corpus
-remain the next steps.
+relations' provenance chunks into answer context, and `--sut graph` can score
+that path. Vector-seeded entity discovery and the first score over the real
+eval corpus remain the next steps.
 
 ## Architecture
 
@@ -472,7 +476,7 @@ docrag/             — baseline single-source RAG (shipped)
 evals/              — eval harness (shipped, Week 1)
   schema.py         Question / Answer / QuestionResult dataclasses
   loader.py         YAML → Question tuple
-  sut.py            SystemUnderTest protocol + baseline adapter
+  sut.py            null, baseline, and graph-aware SUT adapters
   scorer.py         deterministic pass/fail scorer
   runner.py         CLI entry point
   report.py         Markdown + JSON reports
@@ -486,13 +490,13 @@ labgraph/           — typed knowledge graph (shipped, Week 2)
   resolve.py        question text → entities named in the graph
   trace.py          question → trace, with designed non-found states
   storage.py        SQLite persistence (save_graph / load_graph)
-tests/              — 140 tests
+tests/              — 142 tests
 .github/workflows/
   ci.yml            — pytest + eval schema validation on push/PR
 ```
 
-Not yet built (remaining Weeks 4–6): vector-seeded entity discovery, a
-dedicated KG SUT and first KG eval score, demo video, and public corpus.
+Not yet built (remaining Weeks 4–6): vector-seeded entity discovery, the first
+KG eval score, demo video, and public corpus.
 
 ## API
 
