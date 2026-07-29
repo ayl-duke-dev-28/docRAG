@@ -215,9 +215,13 @@ both answer retrieval and the visible trace:
 - **One graph snapshot per query** — answer context and trace generation reuse
   the same loaded graph, preventing them from observing different graph state
   during one request.
+- **Graph-aware eval adapter** — `LabGraphGraphAwareSUT` loads the persisted
+  graph and sends it through the same `answer(..., graph=graph)` path used by
+  the API. Select it with `--sut graph` to compare graph-aware retrieval
+  against the legacy `--sut baseline` on the same questions.
 - **TDD coverage** — focused unit and API integration tests cover ordering,
   deduplication, unrelated-question fallback, shared graph use, and graph-load
-  failure. See the
+  failure, plus graph-SUT selection and execution. See the
   [graph-aware retrieval TDD evidence](docs/testing/graph-aware-retrieval.tdd.md).
 
 ### New: continuous integration
@@ -261,7 +265,8 @@ both answer retrieval and the visible trace:
       along typed edges. First real eval score against the KG. Shipped so far:
       answer context prioritizes the provenance chunks along a question-derived
       bounded graph path, deduplicates them against baseline vector/FTS
-      results, and falls back unchanged when no graph path is found.
+      results, falls back unchanged when no graph path is found, and can be
+      evaluated independently with `--sut graph`.
 - [ ] **Week 5 — Prompt + retrieval iteration** until eval hits **≥ 15 / 20**.
       Trace visualization in the UI. Shipped so far: the LabGraph chrome pass,
       the trace component, relation labels, entity-kind chips,
