@@ -267,7 +267,8 @@ both answer retrieval and the visible trace:
       answer context prioritizes the provenance chunks along a question-derived
       bounded graph path, deduplicates them against baseline vector/FTS
       results, falls back unchanged when no graph path is found, and can be
-      evaluated independently with `--sut graph`.
+      evaluated independently with `--sut graph`. Each graph eval lazily loads
+      one persisted graph snapshot and reuses it across all questions.
 - [ ] **Week 5 — Prompt + retrieval iteration** until eval hits **≥ 15 / 20**.
       Trace visualization in the UI. Shipped so far: the LabGraph chrome pass,
       the trace component, relation labels, entity-kind chips,
@@ -406,6 +407,11 @@ python -m evals.runner --sut baseline --min-pass-rate 0.75
 # unit + integration tests
 pytest --cov=evals --cov=labgraph
 ```
+
+The `graph` SUT loads `labgraph.sqlite3` on its first question and reuses that
+in-memory snapshot for the rest of the run. This avoids repeated database
+loads and ensures every question in one report is scored against identical
+graph state.
 
 ## Multi-hop demo (the proof it works)
 
