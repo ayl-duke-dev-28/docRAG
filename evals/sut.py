@@ -41,14 +41,16 @@ class LabGraphGraphAwareSUT:
     def __init__(self, top_k: int = 5, graph_path: Optional[Path] = None) -> None:
         self.top_k = top_k
         self.graph_path = graph_path
+        self._graph = None
 
     def run(self, question: str) -> Answer:
         from docrag.config import LABGRAPH_DB_PATH
         from docrag.retrieval import answer as labgraph_answer
         from labgraph.storage import load_graph
 
-        graph = load_graph(self.graph_path or LABGRAPH_DB_PATH)
-        response = labgraph_answer(question, top_k=self.top_k, graph=graph)
+        if self._graph is None:
+            self._graph = load_graph(self.graph_path or LABGRAPH_DB_PATH)
+        response = labgraph_answer(question, top_k=self.top_k, graph=self._graph)
         sources = tuple(
             source.get("filename", "")
             for source in response.get("sources", [])

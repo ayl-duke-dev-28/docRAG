@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/ayl-duke-dev-28/docRAG/actions/workflows/ci.yml/badge.svg)](https://github.com/ayl-duke-dev-28/docRAG/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-142%20passing-brightgreen)](./tests)
+[![Tests](https://img.shields.io/badge/tests-143%20passing-brightgreen)](./tests)
 [![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen)](./labgraph)
 
 > **LabGraph is the current product direction.** It started as **docRAG**, a
@@ -127,7 +127,7 @@ entities and relations with the configured extractor:
   half-ingested document as a duplicate.
 - **Verified offline** — runtime selection, invalid configuration, ingestion
   wiring, and rollback behavior are covered without making network requests.
-  The full suite currently passes **142 tests**.
+  The full suite currently passes **143 tests**.
 
 ### New: Google Drive ingestion (Week 3)
 
@@ -218,7 +218,8 @@ both answer retrieval and the visible trace:
 - **Graph-aware eval adapter** — `LabGraphGraphAwareSUT` loads the persisted
   graph and sends it through the same `answer(..., graph=graph)` path used by
   the API. Select it with `--sut graph` to compare graph-aware retrieval
-  against the legacy `--sut baseline` on the same questions.
+  against the legacy `--sut baseline` on the same questions. One eval run
+  lazily loads and reuses a single graph snapshot across every question.
 - **TDD coverage** — focused unit and API integration tests cover ordering,
   deduplication, unrelated-question fallback, shared graph use, and graph-load
   failure, plus graph-SUT selection and execution. See the
@@ -495,7 +496,7 @@ labgraph/           — typed knowledge graph (shipped, Week 2)
   resolve.py        question text → entities named in the graph
   trace.py          question → trace, with designed non-found states
   storage.py        SQLite persistence (save_graph / load_graph)
-tests/              — 142 tests
+tests/              — 143 tests
 .github/workflows/
   ci.yml            — pytest + eval schema validation on push/PR
 ```

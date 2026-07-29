@@ -44,6 +44,7 @@ The next small slice added `LabGraphGraphAwareSUT`, selectable with
 |---|---|---|---|
 | The `graph` alias selects the graph-aware SUT. | `test_get_sut_graph` | Unit | PASS |
 | The SUT loads the configured graph and passes it, the question, and `top_k` into `answer()`, preserving answer text and source filenames. | `test_graph_sut_loads_the_graph_for_answering` | Unit | PASS |
+| Multiple questions in one eval reuse the same loaded graph snapshot. | `test_graph_sut_reuses_one_graph_snapshot` | Unit | PASS |
 
 - **RED:** `.venv/bin/pytest -q tests/test_evals_runner.py` failed during
   collection because `LabGraphGraphAwareSUT` did not exist.
@@ -53,3 +54,13 @@ The next small slice added `LabGraphGraphAwareSUT`, selectable with
   — `142 passed`; `evals/sut.py` coverage `85%`.
 - **Checkpoint note:** the workspace grants read-only access to `.git`, so
   RED/GREEN checkpoint commits could not be created for this follow-up.
+
+### Snapshot reuse follow-up
+
+- **RED:** the focused snapshot test failed because two questions caused two
+  calls to `load_graph`.
+- **GREEN:** the graph adapter now loads lazily and caches that graph for the
+  adapter's lifetime.
+- **Full suite and coverage:**
+  `COVERAGE_FILE=/tmp/docrag_graph_snapshot_coverage .venv/bin/pytest -q --cov=evals.sut --cov-report=term-missing`
+  — `143 passed`; `evals/sut.py` coverage `85%`.

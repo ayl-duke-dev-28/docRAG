@@ -75,6 +75,40 @@ def test_graph_sut_loads_the_graph_for_answering(
 
 
 @pytest.mark.unit
+def test_graph_sut_reuses_one_graph_snapshot(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+):
+    import docrag.retrieval as retrieval_module
+    import labgraph.storage as graph_storage
+
+    graph_path = tmp_path / "labgraph.sqlite3"
+    expected_graph = object()
+    loaded_paths = []
+    received_graphs = []
+
+    def load_once(path):
+        loaded_paths.append(path)
+        return expected_graph
+
+    monkeypatch.setattr(graph_storage, "load_graph", load_once)
+    monkeypatch.setattr(
+        retrieval_module,
+        "answer",
+        lambda question, top_k, graph=None: (
+            received_graphs.append(graph)
+            or {"answer": question, "sources": []}
+        ),
+    )
+
+    sut = LabGraphGraphAwareSUT(graph_path=graph_path)
+    sut.run("first question")
+    sut.run("second question")
+
+    assert loaded_paths == [graph_path]
+    assert received_graphs == [expected_graph, expected_graph]
+
+
+@pytest.mark.unit
 def test_get_sut_unknown_raises():
     with pytest.raises(ValueError, match="Unknown SUT"):
         get_sut("nope")

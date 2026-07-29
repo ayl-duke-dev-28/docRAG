@@ -51,4 +51,5 @@ python -m evals.runner --sut baseline --min-pass-rate 0.75
 
 `evals/sut.py` declares a `SystemUnderTest` protocol and ships three adapters:
 `null` for harness checks, `baseline` for legacy vector/FTS retrieval, and
-`graph` for graph-aware provenance expansion.
+`graph` for graph-aware provenance expansion. The graph adapter lazily loads
+one persisted graph snapshot and reuses it for every question in the eval run.
