@@ -28,6 +28,8 @@ nodes; the bridge between them is what powers multi-hop.
   `add_entity`, `add_relation`, `neighbors`, `neighborhood`, `shortest_path`.
   Merging is idempotent — the same entity ingested twice grows its alias set
   instead of duplicating.
+- **`seed.py`** — maps ranked vector/FTS chunk IDs to unique graph relation
+  endpoints supported by matching provenance, preserving retrieval order.
 - **`extract.py`** — `Extractor` protocol + `RegexExtractor` (deterministic
   baseline) + `OpenAIExtractor` (one structured Responses API call per chunk,
   followed by canonical entity/relation conversion). `extract_many` batches
@@ -81,4 +83,4 @@ is selected otherwise. Set the value to `regex` or `openai` to force a mode;
 
 ## Not yet built
 
-- KG-aware retrieval + SUT (Week 4)
+- Wiring vector-derived entity seeds into bounded traversal (remaining Week 4)

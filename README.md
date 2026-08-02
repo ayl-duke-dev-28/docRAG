@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/ayl-duke-dev-28/docRAG/actions/workflows/ci.yml/badge.svg)](https://github.com/ayl-duke-dev-28/docRAG/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-143%20passing-brightgreen)](./tests)
+[![Tests](https://img.shields.io/badge/tests-145%20passing-brightgreen)](./tests)
 [![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen)](./labgraph)
 
 > **LabGraph is the current product direction.** It started as **docRAG**, a
@@ -127,7 +127,7 @@ entities and relations with the configured extractor:
   half-ingested document as a duplicate.
 - **Verified offline** — runtime selection, invalid configuration, ingestion
   wiring, and rollback behavior are covered without making network requests.
-  The full suite currently passes **143 tests**.
+  The full suite currently passes **145 tests**.
 
 ### New: Google Drive ingestion (Week 3)
 
@@ -199,6 +199,11 @@ both answer retrieval and the visible trace:
 - **Baseline seed retrieval** — the existing semantic-vector path remains the
   first retrieval step when embeddings are available, with FTS/BM25 as its
   network-free fallback.
+- **Vector-to-graph seed primitive** — `seed_entities_from_chunks` maps ranked
+  retrieved chunk IDs to the unique graph relation endpoints supported by
+  their provenance. It preserves chunk rank, accepts numeric or string IDs,
+  and ignores unknown chunks. Pipeline wiring is the next slice; see the
+  [TDD evidence](docs/testing/vector-graph-seeding.tdd.md).
 - **Bounded graph traversal** — entities named in the question are resolved
   against the graph, then connected through the existing depth-bounded typed
   path search.
@@ -268,7 +273,9 @@ both answer retrieval and the visible trace:
       bounded graph path, deduplicates them against baseline vector/FTS
       results, falls back unchanged when no graph path is found, and can be
       evaluated independently with `--sut graph`. Each graph eval lazily loads
-      one persisted graph snapshot and reuses it across all questions.
+      one persisted graph snapshot and reuses it across all questions. Ranked
+      retrieval chunks can now be mapped to provenance-backed graph seed
+      entities; traversal wiring remains.
 - [ ] **Week 5 — Prompt + retrieval iteration** until eval hits **≥ 15 / 20**.
       Trace visualization in the UI. Shipped so far: the LabGraph chrome pass,
       the trace component, relation labels, entity-kind chips,
@@ -471,8 +478,9 @@ matter what you ask is decoration; one that can come back empty is evidence.
 
 The first Week 4 retrieval slice now uses this traversal to promote the
 relations' provenance chunks into answer context, and `--sut graph` can score
-that path. Vector-seeded entity discovery and the first score over the real
-eval corpus remain the next steps.
+that path. Retrieved chunks can also be mapped to provenance-backed graph
+entities. Wiring those seeds into traversal and producing the first score over
+the real eval corpus remain the next steps.
 
 ## Architecture
 
@@ -500,15 +508,16 @@ labgraph/           — typed knowledge graph (shipped, Week 2)
   graph.py          NetworkX MultiDiGraph wrapper + multi-hop traversal
   extract.py        Regex + OpenAI extractors and canonical response conversion
   resolve.py        question text → entities named in the graph
+  seed.py           ranked retrieved chunk IDs → provenance-backed entities
   trace.py          question → trace, with designed non-found states
   storage.py        SQLite persistence (save_graph / load_graph)
-tests/              — 143 tests
+tests/              — 145 tests
 .github/workflows/
   ci.yml            — pytest + eval schema validation on push/PR
 ```
 
-Not yet built (remaining Weeks 4–6): vector-seeded entity discovery, the first
-KG eval score, demo video, and public corpus.
+Not yet built (remaining Weeks 4–6): wiring vector-derived entity seeds into
+bounded traversal, the first KG eval score, demo video, and public corpus.
 
 ## API
 
