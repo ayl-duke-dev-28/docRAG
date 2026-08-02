@@ -230,6 +230,21 @@ both answer retrieval and the visible trace:
   failure, plus graph-SUT selection and execution. See the
   [graph-aware retrieval TDD evidence](docs/testing/graph-aware-retrieval.tdd.md).
 
+The seed helper accepts chunk IDs directly from ranked retrieval results:
+
+```python
+from labgraph import seed_entities_from_chunks
+
+chunk_ids = [source["chunk_id"] for source in retrieved_sources]
+seed_entities = seed_entities_from_chunks(graph, chunk_ids)
+seed_ids = [entity.id for entity in seed_entities]
+```
+
+`seed_ids` preserves the ranking implied by `chunk_ids`, while each entity is
+included at most once. Only endpoints of relations whose provenance contains a
+retrieved chunk are returned. The helper does not traverse the graph or change
+answer retrieval yet; that wiring is the next Week 4 slice.
+
 ### New: continuous integration
 
 - **`.github/workflows/ci.yml`** — the workflow that keeps the eval story
