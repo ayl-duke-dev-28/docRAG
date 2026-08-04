@@ -30,3 +30,24 @@ vector-seeded retrieval work:
 This slice provides the deterministic seed-selection primitive only. Wiring
 those seeds into bounded graph traversal and answer retrieval is the next
 step.
+
+## Follow-up: bounded seed expansion
+
+`expand_chunk_seed_neighborhood` now composes provenance-backed seed selection
+with an undirected, depth-bounded graph neighborhood.
+
+| Guarantee | Test | Type | Result |
+|---|---|---|---|
+| Ranked seeds appear first and inbound/outbound neighbors follow without duplicates. | `test_expand_chunk_seeds_walks_both_directions_with_seeds_first` | Unit | PASS |
+| Depth zero returns seeds only, and unknown chunks remain empty. | `test_expand_chunk_seeds_respects_zero_depth_and_unknown_chunks` | Unit | PASS |
+
+- **RED:** `.venv/bin/pytest -q tests/test_labgraph_seed.py` failed during
+  collection because `expand_chunk_seed_neighborhood` did not exist.
+- **GREEN and coverage:**
+  `COVERAGE_FILE=/tmp/docrag_seed_expansion_coverage .venv/bin/pytest -q --cov=labgraph.seed --cov-report=term-missing`
+  — `147 passed`; `labgraph/seed.py` coverage `100%`.
+- **Checkpoint note:** the workspace grants read-only access to `.git`, so
+  RED/GREEN checkpoint commits could not be created.
+
+The remaining integration step is to use the expanded entities when selecting
+provenance chunks for answer context.

@@ -9,7 +9,7 @@ from .extract import (
 from .graph import LabGraph
 from .resolve import resolve_mentions
 from .schema import Entity, EntityKind, Relation, RelationKind, canonical_id, normalize
-from .seed import seed_entities_from_chunks
+from .seed import expand_chunk_seed_neighborhood, seed_entities_from_chunks
 from .trace import QuestionTrace, TraceStatus, trace_between, trace_for_question
 
 __all__ = [
@@ -27,6 +27,7 @@ __all__ = [
     "RelationKind",
     "TraceStatus",
     "canonical_id",
+    "expand_chunk_seed_neighborhood",
     "normalize",
     "resolve_mentions",
     "seed_entities_from_chunks",
