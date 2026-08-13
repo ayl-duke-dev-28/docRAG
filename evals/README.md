@@ -17,15 +17,20 @@ A question passes when all three deterministic checks hold:
 No LLM judge. No fuzzy matching. The scorer is boring on purpose so the number
 means something.
 
-## Fill in your 20 questions
+## Bundled public evaluation
 
-Edit `evals/questions.yaml`. Delete the three `EXAMPLE` entries. Each question
-must reference at least two real files from your lab corpus.
+`evals/questions.yaml` contains 20 hand-labeled questions over the ten documents
+in `examples/public_corpus`. Each question crosses a report and a decision
+record. Build an offline database in any new directory:
+
+```bash
+demo_data_dir="$(mktemp -d)"
+python scripts/seed_public_corpus.py --data-dir "$demo_data_dir"
+```
 
 Rules from the design doc, worth restating:
 
-- Write them by hand. Do not generate them with an LLM. If the LLM writes both
-  the question and evaluates the system, the eval is worthless.
+- Write additions by hand. Do not use an LLM to generate the questions.
 - Every question must cross at least two source *kinds* (paper + doc, doc +
   slack, paper + email, etc.).
 - Store expected entities as they would naturally appear in an answer, not as
@@ -45,6 +50,9 @@ python -m evals.runner --sut graph --output-md evals/reports/graph.md
 
 # fail CI when the pass rate drops
 python -m evals.runner --sut baseline --min-pass-rate 0.75
+
+# compare checked JSON reports; graph must reach 75% and never trail baseline
+python -m evals.compare evals/reports/public-baseline.json evals/reports/public-graph.json
 ```
 
 ## System Under Test adapters
@@ -53,3 +61,8 @@ python -m evals.runner --sut baseline --min-pass-rate 0.75
 `null` for harness checks, `baseline` for legacy vector/FTS retrieval, and
 `graph` for graph-aware provenance expansion. The graph adapter lazily loads
 one persisted graph snapshot and reuses it for every question in the eval run.
+
+The checked public reports currently record 20/20 for both adapters. This is a
+release regression floor, not evidence that the graph improves over baseline;
+future corpus revisions should include harder paraphrases that create a
+measurable graph lift while preserving the same hand-labeling rules.

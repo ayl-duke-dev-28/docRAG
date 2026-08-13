@@ -37,6 +37,23 @@ jobs:
       - name: Validate eval question schema
         run: python -m evals.runner --questions evals/questions.yaml --sut null
 
+      - name: Seed reproducible public corpus
+        env:
+          OPENAI_API_KEY: ""
+          LABGRAPH_EXTRACTOR: regex
+        run: python scripts/seed_public_corpus.py --data-dir "$RUNNER_TEMP/labgraph-public"
+
+      - name: Run public corpus regression eval
+        env:
+          OPENAI_API_KEY: ""
+          LABGRAPH_EXTRACTOR: regex
+          LABGRAPH_DATA_DIR: ${{ runner.temp }}/labgraph-public
+          LABGRAPH_DB_PATH: ${{ runner.temp }}/labgraph-public/labgraph.sqlite3
+        run: |
+          python -m evals.runner --sut baseline --output-md evals/reports/public-baseline.md --output-json evals/reports/public-baseline.json
+          python -m evals.runner --sut graph --output-md evals/reports/public-graph.md --output-json evals/reports/public-graph.json
+          python -m evals.compare evals/reports/public-baseline.json evals/reports/public-graph.json --min-graph-pass-rate 0.75
+
       - name: Upload eval reports
         if: always()
         uses: actions/upload-artifact@v4
