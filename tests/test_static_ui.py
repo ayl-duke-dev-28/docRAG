@@ -30,3 +30,13 @@ def test_ui_renders_corpus_metadata_and_collapsed_source_policy():
         "Preparing cited answer",
     ):
         assert status in javascript
+
+
+@pytest.mark.unit
+def test_mobile_layout_places_query_before_corpus_and_answers():
+    stylesheet = (ROOT / "static" / "styles.css").read_text()
+
+    mobile = stylesheet.split("@media (max-width: 820px)", 1)[1]
+    assert "order: -1" in mobile
+    assert ".query-form" in mobile
+    assert "order: -1" in mobile.split(".query-form", 1)[1]
