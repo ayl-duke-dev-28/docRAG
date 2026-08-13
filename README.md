@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/ayl-duke-dev-28/docRAG/actions/workflows/ci.yml/badge.svg)](https://github.com/ayl-duke-dev-28/docRAG/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-145%20passing-brightgreen)](./tests)
+[![Tests](https://img.shields.io/badge/tests-158%20passing-brightgreen)](./tests)
 [![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen)](./labgraph)
 
 > **LabGraph is the current product direction.** It started as **docRAG**, a
@@ -47,10 +47,9 @@ at query time, and returns both the answer and the path.
 
 ### New: eval harness (Week 1 of the LabGraph plan)
 
-- **`evals/questions.yaml`** — hand-labeled multi-hop questions with expected
-  entities, expected sources, and a `min_distinct_sources` bar for enforcing
-  the multi-hop requirement. Ships with 3 clearly-marked EXAMPLE questions;
-  the real 20 replace them.
+- **`evals/questions.yaml`** — 20 hand-labeled multi-hop questions over the
+  checked-in ten-document public corpus, with expected entities, expected
+  sources, and a `min_distinct_sources` bar for enforcing multi-source answers.
 - **Deterministic scorer** — `evals/scorer.py` scores pass/fail on three
   checks: every expected entity appears in the answer text (case-insensitive),
   every expected source appears in the retrieved set, and the retrieved set
@@ -127,7 +126,7 @@ entities and relations with the configured extractor:
   half-ingested document as a duplicate.
 - **Verified offline** — runtime selection, invalid configuration, ingestion
   wiring, and rollback behavior are covered without making network requests.
-  The full suite currently passes **145 tests**.
+  The full suite currently passes **158 tests**.
 
 ### New: Google Drive ingestion (Week 3)
 
@@ -202,8 +201,13 @@ both answer retrieval and the visible trace:
 - **Vector-to-graph seed primitive** — `seed_entities_from_chunks` maps ranked
   retrieved chunk IDs to the unique graph relation endpoints supported by
   their provenance. It preserves chunk rank, accepts numeric or string IDs,
-  and ignores unknown chunks. Pipeline wiring is the next slice; see the
+  and ignores unknown chunks. See the
   [TDD evidence](docs/testing/vector-graph-seeding.tdd.md).
+- **Bounded seed expansion** — `expand_chunk_seed_neighborhood` keeps those
+  ranked seeds first, then appends unique neighboring entities up to
+  `max_depth`. It walks edges in both directions so sink nodes such as
+  `Decision` still expose useful context. Relations touching those expanded
+  entities now promote their provenance chunks into answer context.
 - **Bounded graph traversal** — entities named in the question are resolved
   against the graph, then connected through the existing depth-bounded typed
   path search.
@@ -233,17 +237,26 @@ both answer retrieval and the visible trace:
 The seed helper accepts chunk IDs directly from ranked retrieval results:
 
 ```python
-from labgraph import seed_entities_from_chunks
+from labgraph import expand_chunk_seed_neighborhood, seed_entities_from_chunks
 
 chunk_ids = [source["chunk_id"] for source in retrieved_sources]
 seed_entities = seed_entities_from_chunks(graph, chunk_ids)
 seed_ids = [entity.id for entity in seed_entities]
+
+expanded_entities = expand_chunk_seed_neighborhood(
+    graph,
+    chunk_ids,
+    max_depth=1,
+)
+expanded_ids = [entity.id for entity in expanded_entities]
 ```
 
 `seed_ids` preserves the ranking implied by `chunk_ids`, while each entity is
 included at most once. Only endpoints of relations whose provenance contains a
-retrieved chunk are returned. The helper does not traverse the graph or change
-answer retrieval yet; that wiring is the next Week 4 slice.
+retrieved chunk are returned. `expanded_ids` begins with those same seeds and
+then includes their bounded, undirected neighborhood. Answer retrieval orders
+question-path evidence first, seed-neighborhood evidence second, and remaining
+baseline results last, with stable chunk deduplication and the original limit.
 
 ### New: continuous integration
 
@@ -259,6 +272,9 @@ answer retrieval yet; that wiring is the next Week 4 slice.
   - Every eval run in CI uploads its Markdown + JSON reports to
     `evals/reports/` as build artifacts (retained 14 days), so any PR that
     changes the score leaves a downloadable trail.
+  - The checked-in public corpus is seeded offline, both baseline and graph
+    adapters are scored, and `evals.compare` rejects graph regressions or a
+    graph pass rate below 75%.
 - **Why it's here at Week 1:** the design doc calls the eval harness the
   résumé weapon. That's only true if the harness runs on every commit, not
   just when I remember to invoke it. CI turns the eval set into an actual
@@ -282,22 +298,26 @@ answer retrieval yet; that wiring is the next Week 4 slice.
       handling, plus configurable runtime ingestion selection.
 - [x] **Week 3 — Google Drive ingestion.** Read-only OAuth flow, Drive document
       picker, and Docs → chunks → graph through the shared ingestion pipeline.
-- [ ] **Week 4 — Graph-aware retrieval.** Hybrid vector seed + bounded BFS
+- [x] **Week 4 — Graph-aware retrieval.** Hybrid vector seed + bounded BFS
       along typed edges. First real eval score against the KG. Shipped so far:
       answer context prioritizes the provenance chunks along a question-derived
       bounded graph path, deduplicates them against baseline vector/FTS
       results, falls back unchanged when no graph path is found, and can be
       evaluated independently with `--sut graph`. Each graph eval lazily loads
       one persisted graph snapshot and reuses it across all questions. Ranked
-      retrieval chunks can now be mapped to provenance-backed graph seed
-      entities; traversal wiring remains.
-- [ ] **Week 5 — Prompt + retrieval iteration** until eval hits **≥ 15 / 20**.
+      retrieval chunks are mapped to provenance-backed graph seed entities,
+      expanded through a bounded undirected neighborhood, and used to promote
+      connected evidence into answer context.
+- [x] **Week 5 — Prompt + retrieval iteration** until eval hits **≥ 15 / 20**.
       Trace visualization in the UI. Shipped so far: the LabGraph chrome pass,
       the trace component, relation labels, entity-kind chips,
       source-to-graph evidence, trace detail disclosure, question-derived
-      traces, and the designed states for when a question can't be connected
-      to the graph, plus graph diagnostics.
-- [ ] **Week 6 — Demo video + reproducible public corpus + release.**
+      traces, graph diagnostics, source disclosures, staged query status, and
+      corpus contribution metadata. The public offline eval is 20/20 for both
+      adapters; see `evals/reports/`.
+- [x] **Week 6 — Demo assets + reproducible public corpus.** The public corpus,
+      offline seeder, reports, CI gate, browser-verified screenshots, compact
+      MP4 overview, and recording script are checked in under `docs/`.
 
 ## Quick start
 
@@ -491,11 +511,13 @@ The second question is the other half of the proof. It names nothing in the
 graph, so it gets `no_entities` rather than a path. A trace that appears no
 matter what you ask is decoration; one that can come back empty is evidence.
 
-The first Week 4 retrieval slice now uses this traversal to promote the
+The first Week 4 retrieval slice uses this traversal to promote the
 relations' provenance chunks into answer context, and `--sut graph` can score
 that path. Retrieved chunks can also be mapped to provenance-backed graph
-entities. Wiring those seeds into traversal and producing the first score over
-the real eval corpus remain the next steps.
+entities and expanded through a bounded neighborhood. Provenance from that
+expansion is now promoted even when the question does not name a complete
+path. The reproducible public eval records 20/20 for baseline and graph-aware
+retrieval; this is a regression floor, not yet evidence of graph lift.
 
 ## Architecture
 
@@ -523,16 +545,17 @@ labgraph/           — typed knowledge graph (shipped, Week 2)
   graph.py          NetworkX MultiDiGraph wrapper + multi-hop traversal
   extract.py        Regex + OpenAI extractors and canonical response conversion
   resolve.py        question text → entities named in the graph
-  seed.py           ranked retrieved chunk IDs → provenance-backed entities
+  seed.py           retrieved chunks → ranked seeds + bounded neighborhood
   trace.py          question → trace, with designed non-found states
   storage.py        SQLite persistence (save_graph / load_graph)
-tests/              — 145 tests
+examples/public_corpus/ — ten-document offline demo/eval corpus
+tests/              — 158 tests
 .github/workflows/
   ci.yml            — pytest + eval schema validation on push/PR
 ```
 
-Not yet built (remaining Weeks 4–6): wiring vector-derived entity seeds into
-bounded traversal, the first KG eval score, demo video, and public corpus.
+The demo assets and recording script are in `docs/`; the reproducible corpus,
+eval reports, and CI gate are checked in.
 
 ## API
 
