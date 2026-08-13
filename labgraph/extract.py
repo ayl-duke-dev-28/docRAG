@@ -7,7 +7,7 @@ from pydantic import ValidationError
 
 from .aliases import AliasResolver
 from .extraction_schema import StructuredExtraction
-from .schema import Entity, EntityKind, Relation, RelationKind, canonical_id
+from .schema import Entity, EntityKind, Relation, RelationKind, canonical_id, normalize
 
 
 @dataclass(frozen=True)
@@ -73,6 +73,8 @@ class RegexExtractor:
 
         for match in _PERSON_RE.finditer(text):
             name = match.group(1)
+            if not _is_person_candidate(name, chunk.filename):
+                continue
             entity_id = self._resolve(EntityKind.PERSON, name)
             entities.setdefault(
                 entity_id,
@@ -191,6 +193,18 @@ def _classify_source(filename_lower: str) -> str:
     if filename_lower.endswith((".docx", ".doc", ".md")):
         return "meeting_note"
     return "unknown"
+
+
+def _is_person_candidate(name: str, filename: str) -> bool:
+    """Reject deterministic-regex matches that are clearly document metadata."""
+    candidate = normalize(name)
+    if candidate.startswith("project-"):
+        return False
+    document_stem = re.sub(r"\.[a-z0-9]+$", "", filename or "")
+    document_slug = normalize(document_stem)
+    if candidate and f"-{candidate}-" in f"-{document_slug}-":
+        return False
+    return True
 
 
 # ---- LLM extractor --------------------------------------------------
