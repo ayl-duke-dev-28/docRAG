@@ -84,16 +84,33 @@ def retrieve_graph_aware(
     baseline results. Duplicate chunks are returned once. If the question does
     not resolve to a complete path, behavior stays identical to the baseline.
     """
+    from labgraph.seed import expand_chunk_seed_neighborhood
     from labgraph.trace import TraceStatus, trace_for_question
 
     baseline = retrieve(question, top_k)
     trace = trace_for_question(graph, question)
-    if trace.status is not TraceStatus.FOUND:
-        return baseline
 
     sources: List[Dict] = []
     seen_chunk_ids = set()
-    for relation in trace.relations:
+
+    evidence_relations = list(trace.relations) if trace.status is TraceStatus.FOUND else []
+    seed_entities = expand_chunk_seed_neighborhood(
+        graph,
+        [source_item.get("chunk_id") for source_item in baseline],
+        max_depth=1,
+    )
+    relations = tuple(graph.relations())
+    seen_relations = set(evidence_relations)
+    for entity in seed_entities:
+        for relation in relations:
+            if relation in seen_relations:
+                continue
+            if entity.id not in (relation.source_id, relation.target_id):
+                continue
+            evidence_relations.append(relation)
+            seen_relations.add(relation)
+
+    for relation in evidence_relations:
         for raw_chunk_id in relation.provenance:
             try:
                 chunk_id = int(raw_chunk_id)
