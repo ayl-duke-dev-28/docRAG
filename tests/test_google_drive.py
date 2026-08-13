@@ -223,8 +223,8 @@ def test_google_drive_import_endpoint_uses_the_existing_ingestion_pipeline(
                 text="Alex Liu chose curriculum learning.",
             )
 
-    def fake_ingest(path, filename):
-        imported.append((path.read_text(), filename))
+    def fake_ingest(path, filename, *, source_type, source_id):
+        imported.append((path.read_text(), filename, source_type, source_id))
         return {
             "status": "ingested",
             "document_id": 7,
@@ -243,7 +243,12 @@ def test_google_drive_import_endpoint_uses_the_existing_ingestion_pipeline(
 
     assert response.status_code == 200
     assert imported == [
-        ("Alex Liu chose curriculum learning.", "March - team sync.md")
+        (
+            "Alex Liu chose curriculum learning.",
+            "March - team sync.md",
+            "google_drive",
+            "doc-1",
+        )
     ]
     assert response.json()["results"][0]["source"] == {
         "provider": "google_drive",

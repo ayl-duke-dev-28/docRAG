@@ -49,6 +49,64 @@ def test_labgraph_stats_and_entities_endpoints_return_persisted_graph(
 
 
 @pytest.mark.integration
+def test_documents_endpoint_includes_source_type_and_graph_contribution(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    import app as app_module
+
+    monkeypatch.setattr(
+        app_module,
+        "list_documents",
+        lambda: [
+            {
+                "id": 1,
+                "filename": "training_stability_2024.pdf",
+                "stored_path": "/tmp/paper.pdf",
+                "content_sha256": "paper",
+                "pages": 1,
+                "created_at": "2026-08-13T00:00:00Z",
+                "chunks": 1,
+                "chunk_ids": "1",
+                "source_type": "upload",
+                "source_id": None,
+            },
+            {
+                "id": 2,
+                "filename": "march-team-sync.md",
+                "stored_path": "/tmp/notes.md",
+                "content_sha256": "notes",
+                "pages": 1,
+                "created_at": "2026-08-13T00:00:00Z",
+                "chunks": 1,
+                "chunk_ids": "2",
+                "source_type": "google_drive",
+                "source_id": "drive-doc-2",
+            },
+        ],
+    )
+    monkeypatch.setattr(app_module, "load_graph", lambda path: _seed_graph())
+
+    response = TestClient(app_module.app).get("/api/documents")
+
+    assert response.status_code == 200
+    documents = response.json()
+    assert documents[0]["source_type"] == "upload"
+    assert documents[0]["graph_contribution"] == {
+        "entities": 3,
+        "relations": 2,
+        "entity_kinds": {"method": 1, "paper": 1, "person": 1},
+    }
+    assert documents[1]["source_type"] == "google_drive"
+    assert documents[1]["source_id"] == "drive-doc-2"
+    assert documents[1]["graph_contribution"] == {
+        "entities": 2,
+        "relations": 1,
+        "entity_kinds": {"decision": 1, "method": 1},
+    }
+    assert "chunk_ids" not in documents[0]
+
+
+@pytest.mark.integration
 def test_labgraph_query_trace_endpoint_returns_readable_path(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):
