@@ -66,3 +66,29 @@ def test_graph_aware_retrieval_keeps_baseline_for_unrelated_question(
     )
 
     assert sources == baseline
+
+
+def test_graph_aware_retrieval_uses_seed_neighborhood_without_named_path(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    graph = build_seed_graph()
+    rows = {
+        1: _chunk(1, "training_stability_2024.pdf", "Alex authored the paper."),
+        2: _chunk(2, "march-team-sync.md", "The team adopted curriculum learning."),
+        3: _chunk(3, "background.pdf", "Background material."),
+    }
+    baseline = [
+        retrieval.row_to_source(rows[1], 0.9),
+        retrieval.row_to_source(rows[3], 0.8),
+    ]
+    monkeypatch.setattr(retrieval, "retrieve", lambda question, top_k: baseline)
+    monkeypatch.setattr(retrieval, "get_chunk", lambda chunk_id: rows.get(chunk_id))
+
+    sources = retrieval.retrieve_graph_aware(
+        "How can we improve training stability?",
+        graph,
+        top_k=3,
+    )
+
+    assert [source["chunk_id"] for source in sources] == [1, 2, 3]
+    assert sources[1]["filename"] == "march-team-sync.md"
