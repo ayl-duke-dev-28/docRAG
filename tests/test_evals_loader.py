@@ -119,6 +119,14 @@ def test_bundled_questions_file_is_valid():
     root = Path(__file__).resolve().parents[1]
     path = root / "evals" / "questions.yaml"
     questions = load_questions(path)
-    assert len(questions) >= 1
+    corpus = root / "examples" / "public_corpus"
+
+    assert len(questions) == 20
     for q in questions:
         assert q.expected_sources, f"question {q.id} missing expected_sources"
+        assert len({source.kind for source in q.expected_sources}) >= 2
+        assert "EXAMPLE" not in q.tags
+        for source in q.expected_sources:
+            assert (corpus / source.filename).is_file(), (
+                f"question {q.id} references missing corpus file {source.filename}"
+            )
