@@ -79,6 +79,24 @@ def test_regex_extractor_finds_person_and_method():
 
 
 @pytest.mark.unit
+def test_regex_extractor_does_not_treat_document_title_as_a_person():
+    chunk = Chunk(
+        id="c1",
+        filename="training_stability_2024.md",
+        text=(
+            "# Training Stability 2024 Alex Liu authored this Project Atlas "
+            "report using curriculum learning."
+        ),
+    )
+
+    result = RegexExtractor().extract(chunk)
+
+    assert [
+        entity.id for entity in result.entities if entity.kind is EntityKind.PERSON
+    ] == ["person:alex-liu"]
+
+
+@pytest.mark.unit
 def test_regex_extractor_emits_authored_and_uses_method_relations():
     chunk = Chunk(
         id="c1",
