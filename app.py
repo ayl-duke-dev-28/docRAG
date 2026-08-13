@@ -108,7 +108,55 @@ def index():
 
 @app.get("/api/documents")
 def documents():
-    return [dict(row) for row in list_documents()]
+    rows = [dict(row) for row in list_documents()]
+    try:
+        graph = load_graph(LABGRAPH_DB_PATH)
+    except Exception:
+        logger.exception("Graph load failed while listing documents")
+        graph = None
+    relations = tuple(graph.relations()) if graph is not None else ()
+    entities = tuple(graph.entities()) if graph is not None else ()
+
+    result = []
+    for row in rows:
+        chunk_ids = {
+            chunk_id
+            for chunk_id in str(row.pop("chunk_ids", "") or "").split(",")
+            if chunk_id
+        }
+        matched_relations = [
+            relation
+            for relation in relations
+            if chunk_ids.intersection(relation.provenance)
+        ]
+        entity_ids = {
+            entity_id
+            for relation in matched_relations
+            for entity_id in (relation.source_id, relation.target_id)
+        }
+        entity_ids.update(
+            entity.id
+            for entity in entities
+            if entity.as_attrs_dict().get("source_filename") == row["filename"]
+        )
+        contributed_entities = [
+            entity for entity in entities if entity.id in entity_ids
+        ]
+        kind_counts = {
+            kind.value: sum(
+                1 for entity in contributed_entities if entity.kind is kind
+            )
+            for kind in EntityKind
+        }
+        row["graph_contribution"] = {
+            "entities": len(contributed_entities),
+            "relations": len(matched_relations),
+            "entity_kinds": {
+                kind: count for kind, count in kind_counts.items() if count
+            },
+        }
+        result.append(row)
+    return result
 
 
 @app.get("/api/google-drive/status")
@@ -195,7 +243,12 @@ def google_drive_import(request: GoogleDriveImportRequest):
             ) as temp:
                 temp.write(exported.text)
                 temp.flush()
-                result = ingest_file(Path(temp.name), filename)
+                result = ingest_file(
+                    Path(temp.name),
+                    filename,
+                    source_type="google_drive",
+                    source_id=exported.document.id,
+                )
         except GoogleDriveError as exc:
             raise HTTPException(status_code=502, detail=str(exc)) from exc
         except ValueError as exc:

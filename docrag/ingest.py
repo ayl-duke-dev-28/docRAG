@@ -127,7 +127,13 @@ def chunk_pages(pages: List[Tuple[int, str]]) -> List[Dict]:
     return chunks
 
 
-def ingest_file(temp_path: Path, original_filename: str) -> Dict:
+def ingest_file(
+    temp_path: Path,
+    original_filename: str,
+    *,
+    source_type: str = "upload",
+    source_id: Optional[str] = None,
+) -> Dict:
     content_hash = sha256_file(temp_path)
     existing = document_by_hash(content_hash)
     if existing:
@@ -155,7 +161,14 @@ def ingest_file(temp_path: Path, original_filename: str) -> Dict:
         for chunk, embedding in zip(chunks, embeddings):
             chunk["embedding"] = embedding
 
-    document_id = create_document(original_filename, stored_path, content_hash, len(pages))
+    document_id = create_document(
+        original_filename,
+        stored_path,
+        content_hash,
+        len(pages),
+        source_type=source_type,
+        source_id=source_id,
+    )
     add_chunks(document_id, original_filename, chunks)
     try:
         update_labgraph_for_document(document_id)

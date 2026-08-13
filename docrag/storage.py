@@ -1,7 +1,7 @@
 import json
 import sqlite3
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Iterable, Iterator, List, Optional
 
@@ -17,7 +17,9 @@ CREATE TABLE IF NOT EXISTS documents (
   stored_path TEXT NOT NULL,
   content_sha256 TEXT NOT NULL UNIQUE,
   pages INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  source_type TEXT NOT NULL DEFAULT 'upload',
+  source_id TEXT
 );
 
 CREATE TABLE IF NOT EXISTS chunks (
@@ -71,6 +73,15 @@ def connect() -> Iterator[sqlite3.Connection]:
 def init_db() -> None:
     with connect() as conn:
         conn.executescript(SCHEMA)
+        columns = {
+            row["name"] for row in conn.execute("PRAGMA table_info(documents)")
+        }
+        if "source_type" not in columns:
+            conn.execute(
+                "ALTER TABLE documents ADD COLUMN source_type TEXT NOT NULL DEFAULT 'upload'"
+            )
+        if "source_id" not in columns:
+            conn.execute("ALTER TABLE documents ADD COLUMN source_id TEXT")
 
 
 def document_by_hash(content_sha256: str) -> Optional[sqlite3.Row]:
@@ -89,14 +100,31 @@ def get_document(document_id: int) -> Optional[sqlite3.Row]:
         ).fetchone()
 
 
-def create_document(filename: str, stored_path: Path, content_sha256: str, pages: int) -> int:
+def create_document(
+    filename: str,
+    stored_path: Path,
+    content_sha256: str,
+    pages: int,
+    *,
+    source_type: str = "upload",
+    source_id: Optional[str] = None,
+) -> int:
     with connect() as conn:
         cursor = conn.execute(
             """
-            INSERT INTO documents (filename, stored_path, content_sha256, pages, created_at)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO documents
+              (filename, stored_path, content_sha256, pages, created_at, source_type, source_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
-            (filename, str(stored_path), content_sha256, pages, datetime.utcnow().isoformat()),
+            (
+                filename,
+                str(stored_path),
+                content_sha256,
+                pages,
+                datetime.now(timezone.utc).isoformat(),
+                source_type,
+                source_id,
+            ),
         )
         return int(cursor.lastrowid)
 
@@ -139,7 +167,7 @@ def list_documents() -> List[sqlite3.Row]:
     with connect() as conn:
         return conn.execute(
             """
-            SELECT d.*, COUNT(c.id) AS chunks
+            SELECT d.*, COUNT(c.id) AS chunks, GROUP_CONCAT(c.id) AS chunk_ids
             FROM documents d
             LEFT JOIN chunks c ON c.document_id = d.id
             GROUP BY d.id
