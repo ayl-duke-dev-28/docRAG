@@ -16,6 +16,15 @@ def _chunk(chunk_id: int, filename: str, text: str) -> Dict:
     }
 
 
+def test_source_payload_includes_document_source_type():
+    row = _chunk(1, "team-sync.md", "Meeting notes")
+    row["source_type"] = "google_drive"
+
+    source = retrieval.row_to_source(row, 0.9)
+
+    assert source["source_type"] == "google_drive"
+
+
 def test_graph_aware_retrieval_prioritizes_path_provenance_and_deduplicates(
     monkeypatch: pytest.MonkeyPatch,
 ):
