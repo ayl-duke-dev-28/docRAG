@@ -6,6 +6,7 @@ const docTypeEl = document.querySelector("#doc-type");
 const docSortEl = document.querySelector("#doc-sort");
 const docCountEl = document.querySelector("#doc-count");
 const graphCountEl = document.querySelector("#graph-count");
+const graphKindsEl = document.querySelector("#graph-kinds");
 const refreshGraphEl = document.querySelector("#refresh-graph");
 const formEl = document.querySelector("#query-form");
 const questionEl = document.querySelector("#question");
@@ -18,6 +19,8 @@ const driveDisconnectEl = document.querySelector("#drive-disconnect");
 const drivePickerEl = document.querySelector("#drive-picker");
 const driveDocumentsEl = document.querySelector("#drive-documents");
 const driveImportEl = document.querySelector("#drive-import");
+const uploadStatusEl = document.querySelector("#upload-status");
+const queryStatusEl = document.querySelector("#query-status");
 
 let allDocuments = [];
 
@@ -45,6 +48,18 @@ function documentType(doc) {
   return match ? match[1] : "";
 }
 
+function sourceTypeLabel(sourceType) {
+  return sourceType === "google_drive" ? "Google Drive" : "Upload";
+}
+
+function graphContributionLabel(contribution) {
+  if (!contribution || !contribution.entities) return "No graph entities";
+  const kinds = Object.entries(contribution.entity_kinds || {})
+    .map(([kind, count]) => `${count} ${entityKindLabel(kind).toLowerCase()}`)
+    .join(", ");
+  return `${contribution.entities} entities · ${contribution.relations} relations${kinds ? ` · ${kinds}` : ""}`;
+}
+
 function filteredDocuments() {
   const query = docSearchEl.value.trim().toLowerCase();
   const type = docTypeEl.value;
@@ -60,6 +75,10 @@ function filteredDocuments() {
       if (sort === "name") return a.filename.localeCompare(b.filename);
       if (sort === "pages") return b.pages - a.pages || a.filename.localeCompare(b.filename);
       if (sort === "chunks") return b.chunks - a.chunks || a.filename.localeCompare(b.filename);
+      if (sort === "graph") {
+        return (b.graph_contribution?.entities || 0) - (a.graph_contribution?.entities || 0)
+          || a.filename.localeCompare(b.filename);
+      }
       return new Date(b.created_at) - new Date(a.created_at);
     });
 }
@@ -86,7 +105,12 @@ function renderDocuments() {
         <strong>${escapeHtml(doc.filename)}</strong>
         ${renderDocumentActions(doc)}
       </div>
+      <div class="doc-badges">
+        <span>${escapeHtml(sourceTypeLabel(doc.source_type))}</span>
+        <span>${escapeHtml(documentType(doc).toUpperCase() || "Document")}</span>
+      </div>
       <div class="meta">${doc.pages} pages · ${doc.chunks} chunks · ${new Date(doc.created_at).toLocaleString()}</div>
+      <div class="meta graph-contribution">${escapeHtml(graphContributionLabel(doc.graph_contribution))}</div>
     </article>
   `).join("");
 }
@@ -117,9 +141,14 @@ async function loadLabgraphStats() {
   const stats = await response.json();
   if (!stats.entities) {
     graphCountEl.textContent = "No graph built yet.";
+    graphKindsEl.innerHTML = "";
     return;
   }
   graphCountEl.textContent = `${stats.entities} entities · ${stats.relations} relations`;
+  graphKindsEl.innerHTML = Object.entries(stats.entity_kinds || {})
+    .filter(([, count]) => count)
+    .map(([kind, count]) => `<span data-kind="${escapeHtml(kind)}">${count} ${escapeHtml(entityKindLabel(kind))}</span>`)
+    .join("");
 }
 
 function setDriveActions({ configured, connected }) {
@@ -189,7 +218,7 @@ async function uploadFiles(files) {
   if (!files.length) return;
   const data = new FormData();
   for (const file of files) data.append("files", file);
-  addMessage("assistant", "<p>Indexing uploaded papers...</p>");
+  uploadStatusEl.textContent = "Indexing uploaded papers and updating the graph…";
   const response = await fetch("/api/upload", { method: "POST", body: data });
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.detail || "Upload failed.");
@@ -198,6 +227,7 @@ async function uploadFiles(files) {
     return `${escapeHtml(result.filename)}: ${chunks}`;
   }).join("<br>");
   addMessage("assistant", `<p>${summary}</p>`);
+  uploadStatusEl.textContent = `Finished indexing ${payload.results.length} file${payload.results.length === 1 ? "" : "s"}.`;
   await loadDocuments();
   await loadLabgraphStats();
 }
@@ -273,8 +303,8 @@ function renderSources(sources, trace) {
   return `
     <div class="sources">
       ${sources.map((source, index) => `
-        <details class="source">
-          <summary>[${index + 1}] ${escapeHtml(source.filename)}, pages ${escapeHtml(source.pages)}</summary>
+        <details class="source"${index < 2 ? " open" : ""}>
+          <summary>[${index + 1}] ${escapeHtml(source.filename)}, pages ${escapeHtml(source.pages)} · ${escapeHtml(sourceTypeLabel(source.source_type))}</summary>
           ${renderSourceEvidence(source, trace)}
           <p>${escapeHtml(source.text)}</p>
         </details>
@@ -467,22 +497,42 @@ function renderTrace(trace) {
 
 async function ask(question) {
   addMessage("user", `<p>${escapeHtml(question)}</p>`);
-  const pending = addMessage("assistant", "<p>Searching corpus...</p>");
-  const response = await fetch("/api/query", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ question, top_k: 6 }),
-  });
-  const payload = await response.json();
-  if (!response.ok) throw new Error(payload.detail || "Query failed.");
-  modePill.textContent = payload.mode === "rag" ? "LLM RAG" : "Local retrieval";
-  pending.innerHTML = `<p>${escapeHtml(payload.answer)}</p>${renderTrace(payload.trace)}${renderSources(payload.sources, payload.trace)}`;
+  const stages = [
+    "Searching corpus",
+    "Finding graph entities",
+    "Walking typed relations",
+    "Preparing cited answer",
+  ];
+  let stageIndex = 0;
+  const pending = addMessage("assistant", `<p>${stages[stageIndex]}…</p>`);
+  queryStatusEl.textContent = stages[stageIndex];
+  const stageTimer = window.setInterval(() => {
+    if (stageIndex >= stages.length - 1) return;
+    stageIndex += 1;
+    queryStatusEl.textContent = stages[stageIndex];
+    pending.innerHTML = `<p>${stages[stageIndex]}…</p>`;
+  }, 700);
+  try {
+    const response = await fetch("/api/query", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question, top_k: 6 }),
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.detail || "Query failed.");
+    modePill.textContent = payload.mode === "rag" ? "LLM RAG" : "Local retrieval";
+    pending.innerHTML = `<p>${escapeHtml(payload.answer)}</p>${renderTrace(payload.trace)}${renderSources(payload.sources, payload.trace)}`;
+    queryStatusEl.textContent = "Answer ready";
+  } finally {
+    window.clearInterval(stageTimer);
+  }
 }
 
 inputEl.addEventListener("change", async (event) => {
   try {
     await uploadFiles(event.target.files);
   } catch (error) {
+    uploadStatusEl.textContent = error.message;
     addMessage("assistant", `<p>${escapeHtml(error.message)}</p>`);
   } finally {
     inputEl.value = "";
@@ -594,6 +644,7 @@ formEl.addEventListener("submit", async (event) => {
   try {
     await ask(question);
   } catch (error) {
+    queryStatusEl.textContent = `Query failed: ${error.message}`;
     addMessage("assistant", `<p>${escapeHtml(error.message)}</p>`);
   } finally {
     formEl.querySelector("button").disabled = false;

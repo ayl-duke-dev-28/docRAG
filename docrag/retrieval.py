@@ -38,6 +38,9 @@ def row_to_source(row, score: float) -> Dict:
         "pages": page_label(row["page_start"], row["page_end"]),
         "score": round(score, 4),
         "text": row["text"],
+        "source_type": (
+            row["source_type"] if "source_type" in row.keys() else "upload"
+        ),
     }
 
 

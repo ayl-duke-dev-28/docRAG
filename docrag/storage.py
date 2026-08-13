@@ -220,7 +220,7 @@ def get_chunk(chunk_id: int) -> Optional[sqlite3.Row]:
     with connect() as conn:
         return conn.execute(
             """
-            SELECT c.*, d.filename
+            SELECT c.*, d.filename, d.source_type
             FROM chunks c
             JOIN documents d ON d.id = c.document_id
             WHERE c.id = ?
@@ -247,7 +247,7 @@ def all_embedded_chunks() -> List[sqlite3.Row]:
     with connect() as conn:
         return conn.execute(
             """
-            SELECT c.*, d.filename
+            SELECT c.*, d.filename, d.source_type
             FROM chunks c
             JOIN documents d ON d.id = c.document_id
             WHERE c.embedding IS NOT NULL
@@ -265,6 +265,7 @@ def search_fts(query: str, limit: int) -> List[sqlite3.Row]:
               c.page_start,
               c.page_end,
               d.filename,
+              d.source_type,
               bm25(chunks_fts) AS score
             FROM chunks_fts
             JOIN chunks c ON c.id = chunks_fts.rowid

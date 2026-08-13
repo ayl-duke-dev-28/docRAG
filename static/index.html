@@ -22,12 +22,13 @@
           <span>Drop or choose papers</span>
           <small>PDF, TXT, or Markdown</small>
         </label>
+        <p id="upload-status" class="meta status-line" aria-live="polite"></p>
 
         <section class="drive-import" aria-label="Google Drive import">
           <div class="drive-header">
             <div>
               <h2>Google Drive</h2>
-              <p id="drive-status" class="meta">Checking connection…</p>
+              <p id="drive-status" class="meta" aria-live="polite">Checking connection…</p>
             </div>
             <div class="drive-actions">
               <button id="drive-connect" type="button" class="secondary hidden">Connect</button>
@@ -44,7 +45,8 @@
         <section class="graph-status" aria-label="LabGraph status">
           <div>
             <h2>LabGraph</h2>
-            <p id="graph-count" class="meta">No graph built yet.</p>
+            <p id="graph-count" class="meta" aria-live="polite">No graph built yet.</p>
+            <div id="graph-kinds" class="kind-counts" aria-label="Entity counts by kind"></div>
           </div>
           <button id="refresh-graph" type="button">Refresh</button>
         </section>
@@ -70,6 +72,7 @@
               <option value="name">Name</option>
               <option value="pages">Pages</option>
               <option value="chunks">Chunks</option>
+              <option value="graph">Graph contribution</option>
             </select>
           </div>
           <div id="doc-count" class="meta"></div>
@@ -85,6 +88,7 @@
           </div>
         </div>
         <form id="query-form" class="query-form">
+          <p id="query-status" class="meta status-line" aria-live="polite"></p>
           <textarea id="question" placeholder="Ask a multi-hop question across your lab corpus..." rows="3"></textarea>
           <button type="submit">Ask</button>
         </form>
