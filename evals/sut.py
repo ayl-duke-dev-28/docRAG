@@ -59,14 +59,15 @@ class LabGraphGraphAwareSUT:
         return Answer(text=response.get("answer", ""), sources=sources)
 
 
-def get_sut(name: str) -> SystemUnderTest:
+def get_sut(name: str, top_k: Optional[int] = None) -> SystemUnderTest:
     normalized = name.strip().lower()
+    context_limit = top_k if top_k is not None else 5
     if normalized in {"null", "none", "dry-run"}:
         return NullSUT()
     if normalized in {"baseline", "labgraph", "labgraph-baseline", "docrag", "docrag-baseline"}:
-        return LabGraphBaselineSUT()
+        return LabGraphBaselineSUT(top_k=context_limit)
     if normalized in {"graph", "graph-aware", "labgraph-graph-aware"}:
-        return LabGraphGraphAwareSUT()
+        return LabGraphGraphAwareSUT(top_k=context_limit)
     raise ValueError(
         f"Unknown SUT name: {name!r}. Try 'null', 'baseline', or 'graph'."
     )

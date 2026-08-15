@@ -69,6 +69,12 @@ def _parse_args(argv: Sequence[str]) -> argparse.Namespace:
         default=None,
         help="Exit with non-zero status if pass rate is below this threshold (0-1).",
     )
+    parser.add_argument(
+        "--top-k",
+        type=int,
+        default=None,
+        help="Override the SUT retrieval context limit.",
+    )
     return parser.parse_args(argv)
 
 
@@ -112,8 +118,10 @@ def _write_reports(
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parse_args(argv if argv is not None else sys.argv[1:])
+    if args.top_k is not None and args.top_k < 1:
+        raise ValueError("--top-k must be at least 1")
     questions: Tuple[Question, ...] = load_questions(args.questions)
-    sut = get_sut(args.sut)
+    sut = get_sut(args.sut, top_k=args.top_k)
     summary = run_eval(questions, sut)
     _print_console_summary(summary)
     _write_reports(
