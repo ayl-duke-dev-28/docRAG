@@ -34,6 +34,15 @@ def test_get_sut_graph():
 
 
 @pytest.mark.unit
+def test_get_sut_applies_requested_context_budget():
+    baseline = get_sut("baseline", top_k=2)
+    graph = get_sut("graph", top_k=2)
+
+    assert baseline.top_k == 2
+    assert graph.top_k == 2
+
+
+@pytest.mark.unit
 def test_graph_sut_loads_the_graph_for_answering(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ):
@@ -204,3 +213,30 @@ def test_main_returns_zero_when_threshold_not_set(tmp_path: Path):
         ]
     )
     assert exit_code == 0
+
+
+@pytest.mark.integration
+def test_main_passes_top_k_to_the_selected_sut(monkeypatch: pytest.MonkeyPatch):
+    import evals.runner as runner_module
+
+    received = {}
+
+    def select_sut(name, top_k=None):
+        received.update(name=name, top_k=top_k)
+        return NullSUT()
+
+    monkeypatch.setattr(runner_module, "get_sut", select_sut)
+
+    exit_code = runner_module.main(
+        [
+            "--questions",
+            str(DEFAULT_QUESTIONS),
+            "--sut",
+            "baseline",
+            "--top-k",
+            "2",
+        ]
+    )
+
+    assert exit_code == 0
+    assert received == {"name": "baseline", "top_k": 2}
