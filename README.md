@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/ayl-duke-dev-28/docRAG/actions/workflows/ci.yml/badge.svg)](https://github.com/ayl-duke-dev-28/docRAG/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-158%20passing-brightgreen)](./tests)
+[![Tests](https://img.shields.io/badge/tests-162%20passing-brightgreen)](./tests)
 [![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen)](./labgraph)
 
 > **LabGraph is the current product direction.** It started as **docRAG**, a
@@ -126,7 +126,7 @@ entities and relations with the configured extractor:
   half-ingested document as a duplicate.
 - **Verified offline** — runtime selection, invalid configuration, ingestion
   wiring, and rollback behavior are covered without making network requests.
-  The full suite currently passes **158 tests**.
+  The full suite currently passes **162 tests**.
 
 ### New: Google Drive ingestion (Week 3)
 
@@ -275,6 +275,9 @@ baseline results last, with stable chunk deduplication and the original limit.
   - The checked-in public corpus is seeded offline, both baseline and graph
     adapters are scored, and `evals.compare` rejects graph regressions or a
     graph pass rate below 75%.
+  - A tight-context challenge runs with `top_k=2` and requires at least 80%
+    graph accuracy plus a 40-point improvement over baseline. The current
+    checked reports show **40% baseline vs 100% graph-aware**.
 - **Why it's here at Week 1:** the design doc calls the eval harness the
   résumé weapon. That's only true if the harness runs on every commit, not
   just when I remember to invoke it. CI turns the eval set into an actual
@@ -313,8 +316,9 @@ baseline results last, with stable chunk deduplication and the original limit.
       the trace component, relation labels, entity-kind chips,
       source-to-graph evidence, trace detail disclosure, question-derived
       traces, graph diagnostics, source disclosures, staged query status, and
-      corpus contribution metadata. The public offline eval is 20/20 for both
-      adapters; see `evals/reports/`.
+      corpus contribution metadata. The public regression set is 20/20 for
+      both adapters, while the tight-context challenge measures a 60-point
+      graph lift; see `evals/reports/`.
 - [x] **Week 6 — Demo assets + reproducible public corpus.** The public corpus,
       offline seeder, reports, CI gate, browser-verified screenshots, compact
       MP4 overview, and recording script are checked in under `docs/`.
@@ -517,7 +521,9 @@ that path. Retrieved chunks can also be mapped to provenance-backed graph
 entities and expanded through a bounded neighborhood. Provenance from that
 expansion is now promoted even when the question does not name a complete
 path. The reproducible public eval records 20/20 for baseline and graph-aware
-retrieval; this is a regression floor, not yet evidence of graph lift.
+retrieval. A separate two-source challenge records 2/5 baseline versus 5/5
+graph-aware, demonstrating that bounded provenance expansion recovers decision
+notes that lexical retrieval drops.
 
 ## Architecture
 
@@ -549,7 +555,7 @@ labgraph/           — typed knowledge graph (shipped, Week 2)
   trace.py          question → trace, with designed non-found states
   storage.py        SQLite persistence (save_graph / load_graph)
 examples/public_corpus/ — ten-document offline demo/eval corpus
-tests/              — 158 tests
+tests/              — 162 tests
 .github/workflows/
   ci.yml            — pytest + eval schema validation on push/PR
 ```

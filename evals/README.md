@@ -64,5 +64,18 @@ one persisted graph snapshot and reuses it for every question in the eval run.
 
 The checked public reports currently record 20/20 for both adapters. This is a
 release regression floor, not evidence that the graph improves over baseline;
-future corpus revisions should include harder paraphrases that create a
-measurable graph lift while preserving the same hand-labeling rules.
+`challenge_questions.yaml` supplies that separate measurement. It uses five
+report-first paraphrases and a two-source context budget:
+
+```bash
+python -m evals.runner --questions evals/challenge_questions.yaml --sut baseline --top-k 2 \
+  --output-json evals/reports/challenge-baseline.json
+python -m evals.runner --questions evals/challenge_questions.yaml --sut graph --top-k 2 \
+  --output-json evals/reports/challenge-graph.json
+python -m evals.compare evals/reports/challenge-baseline.json \
+  evals/reports/challenge-graph.json --min-graph-pass-rate 0.8 --min-improvement 0.4
+```
+
+The checked challenge reports record baseline 2/5 and graph-aware 5/5: a
+60-percentage-point graph lift. CI requires at least 80% graph accuracy and a
+40-point improvement on this set.

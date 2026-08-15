@@ -53,6 +53,9 @@ jobs:
           python -m evals.runner --sut baseline --output-md evals/reports/public-baseline.md --output-json evals/reports/public-baseline.json
           python -m evals.runner --sut graph --output-md evals/reports/public-graph.md --output-json evals/reports/public-graph.json
           python -m evals.compare evals/reports/public-baseline.json evals/reports/public-graph.json --min-graph-pass-rate 0.75
+          python -m evals.runner --questions evals/challenge_questions.yaml --sut baseline --top-k 2 --output-md evals/reports/challenge-baseline.md --output-json evals/reports/challenge-baseline.json
+          python -m evals.runner --questions evals/challenge_questions.yaml --sut graph --top-k 2 --output-md evals/reports/challenge-graph.md --output-json evals/reports/challenge-graph.json
+          python -m evals.compare evals/reports/challenge-baseline.json evals/reports/challenge-graph.json --min-graph-pass-rate 0.8 --min-improvement 0.4
 
       - name: Upload eval reports
         if: always()

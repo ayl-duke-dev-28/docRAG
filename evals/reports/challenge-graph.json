@@ -1,0 +1,89 @@
+{
+  "failed": 0,
+  "pass_rate": 1.0,
+  "passed": 5,
+  "results": [
+    {
+      "distinct_sources": 2,
+      "matched_entities": [
+        "Alex Liu",
+        "curriculum learning"
+      ],
+      "matched_sources": [
+        "training_stability_2024.md",
+        "2024-03-team-sync.md"
+      ],
+      "missing_entities": [],
+      "missing_sources": [],
+      "passed": true,
+      "question_id": "lift-atlas-001",
+      "reasons": []
+    },
+    {
+      "distinct_sources": 2,
+      "matched_entities": [
+        "qLoRA",
+        "LoRA"
+      ],
+      "matched_sources": [
+        "efficient_finetuning_survey.md",
+        "weekly-standup.md"
+      ],
+      "missing_entities": [],
+      "missing_sources": [],
+      "passed": true,
+      "question_id": "lift-beacon-001",
+      "reasons": []
+    },
+    {
+      "distinct_sources": 2,
+      "matched_entities": [
+        "RLHF",
+        "Mateo Ruiz"
+      ],
+      "matched_sources": [
+        "alignment_protocol.md",
+        "planning-meeting.md"
+      ],
+      "missing_entities": [],
+      "missing_sources": [],
+      "passed": true,
+      "question_id": "lift-cedar-001",
+      "reasons": []
+    },
+    {
+      "distinct_sources": 2,
+      "matched_entities": [
+        "method Y",
+        "gradient clipping"
+      ],
+      "matched_sources": [
+        "method_y_ablation.md",
+        "2024-05-team-sync.md"
+      ],
+      "missing_entities": [],
+      "missing_sources": [],
+      "passed": true,
+      "question_id": "lift-delta-001",
+      "reasons": []
+    },
+    {
+      "distinct_sources": 2,
+      "matched_entities": [
+        "method Z",
+        "curriculum learning"
+      ],
+      "matched_sources": [
+        "method_z_experiments.md",
+        "2024-06-team-sync.md"
+      ],
+      "missing_entities": [],
+      "missing_sources": [],
+      "passed": true,
+      "question_id": "lift-echo-001",
+      "reasons": []
+    }
+  ],
+  "sut": "labgraph-graph-aware",
+  "total": 5
+}
