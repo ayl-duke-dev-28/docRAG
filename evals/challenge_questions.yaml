@@ -1,0 +1,61 @@
+# Tight-context challenge set for measuring graph lift on the public corpus.
+# These questions begin with report-specific language and require the connected
+# decision record. Keep top_k=2 when running this set.
+
+version: 1
+questions:
+  - id: lift-atlas-001
+    question: "Who investigated gradually introducing difficult examples, and what happened next?"
+    expected_entities:
+      - "Alex Liu"
+      - "curriculum learning"
+    expected_sources:
+      - paper: training_stability_2024.md
+      - meeting_note: 2024-03-team-sync.md
+    min_distinct_sources: 2
+    tags: [graph-lift, paraphrase, tight-context]
+    notes: "The question uses report language without naming Atlas or the March sync."
+
+  - id: lift-beacon-001
+    question: "What followed the constrained hardware memory-use comparison?"
+    expected_entities:
+      - "qLoRA"
+      - "LoRA"
+    expected_sources:
+      - paper: efficient_finetuning_survey.md
+      - meeting_note: weekly-standup.md
+    min_distinct_sources: 2
+    tags: [graph-lift, paraphrase, tight-context]
+
+  - id: lift-cedar-001
+    question: "What happened after reviewer preferences and safety checks were proposed?"
+    expected_entities:
+      - "RLHF"
+      - "Mateo Ruiz"
+    expected_sources:
+      - paper: alignment_protocol.md
+      - meeting_note: planning-meeting.md
+    min_distinct_sources: 2
+    tags: [graph-lift, paraphrase, tight-context]
+
+  - id: lift-delta-001
+    question: "What followed the unreliable ablation finding?"
+    expected_entities:
+      - "method Y"
+      - "gradient clipping"
+    expected_sources:
+      - paper: method_y_ablation.md
+      - meeting_note: 2024-05-team-sync.md
+    min_distinct_sources: 2
+    tags: [graph-lift, paraphrase, tight-context]
+
+  - id: lift-echo-001
+    question: "What followed the convergence and early-stability experiment?"
+    expected_entities:
+      - "method Z"
+      - "curriculum learning"
+    expected_sources:
+      - paper: method_z_experiments.md
+      - meeting_note: 2024-06-team-sync.md
+    min_distinct_sources: 2
+    tags: [graph-lift, paraphrase, tight-context]
