@@ -42,6 +42,23 @@ def test_compare_main_enforces_graph_floor_and_no_regression(tmp_path: Path):
     assert main([str(baseline), str(graph), "--min-graph-pass-rate", "0.75"]) == 1
 
 
+@pytest.mark.integration
+def test_compare_main_enforces_minimum_graph_lift(tmp_path: Path):
+    baseline = _report(tmp_path / "baseline.json", sut="baseline", passed=8)
+    graph = _report(tmp_path / "graph.json", sut="graph", passed=12)
+
+    assert main(
+        [
+            str(baseline),
+            str(graph),
+            "--min-graph-pass-rate",
+            "0.5",
+            "--min-improvement",
+            "0.3",
+        ]
+    ) == 1
+
+
 @pytest.mark.unit
 def test_compare_reports_rejects_different_question_counts(tmp_path: Path):
     baseline = _report(tmp_path / "baseline.json", sut="baseline", passed=10)
