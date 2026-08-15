@@ -130,3 +130,20 @@ def test_bundled_questions_file_is_valid():
             assert (corpus / source.filename).is_file(), (
                 f"question {q.id} references missing corpus file {source.filename}"
             )
+
+
+@pytest.mark.unit
+def test_graph_lift_challenge_is_small_and_source_backed():
+    root = Path(__file__).resolve().parents[1]
+    questions = load_questions(root / "evals" / "challenge_questions.yaml")
+    corpus = root / "examples" / "public_corpus"
+
+    assert len(questions) == 5
+    for question in questions:
+        assert "graph-lift" in question.tags
+        assert question.min_distinct_sources == 2
+        assert len(question.expected_sources) == 2
+        assert all(
+            (corpus / source.filename).is_file()
+            for source in question.expected_sources
+        )
