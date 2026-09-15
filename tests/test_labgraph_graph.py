@@ -196,6 +196,28 @@ def test_undirected_neighborhood_reaches_inbound_neighbours():
     assert "method:curriculum-learning" in {n.id for n in nodes}
 
 
+@pytest.mark.unit
+def test_incident_relations_include_incoming_and_outgoing_edges():
+    # Arrange
+    g = _small_graph()
+
+    # Act
+    incident = g.incident_relations("method:curriculum-learning")
+
+    # Assert
+    assert [
+        (relation.kind.value, direction, other.id) for relation, other, direction in incident
+    ] == [
+        (RelationKind.DECIDED_IN.value, "outgoing", "decision:march-team-sync"),
+        (RelationKind.USES_METHOD.value, "incoming", "paper:training-stability-2024"),
+    ]
+
+
+@pytest.mark.unit
+def test_incident_relations_on_missing_entity_returns_empty():
+    assert LabGraph().incident_relations("person:nobody") == []
+
+
 def _small_graph() -> LabGraph:
     g = LabGraph()
     g.add_entity(_person())

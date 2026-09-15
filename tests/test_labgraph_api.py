@@ -37,15 +37,34 @@ def test_labgraph_stats_and_entities_endpoints_return_persisted_graph(
 
     entities = client.get("/api/labgraph/entities", params={"kind": "method"})
     assert entities.status_code == 200
-    assert entities.json() == [
-        {
-            "id": "method:curriculum-learning",
-            "kind": "method",
-            "name": "curriculum learning",
-            "aliases": [],
-            "attrs": {},
-        }
-    ]
+    assert entities.json() == {
+        "total": 1,
+        "returned": 1,
+        "entities": [
+            {
+                "id": "method:curriculum-learning",
+                "kind": "method",
+                "name": "curriculum learning",
+                "aliases": [],
+                "attrs": {},
+                "relation_count": 2,
+                "relations": [
+                    {
+                        "kind": "decided_in",
+                        "direction": "outgoing",
+                        "entity_id": "decision:march-team-sync",
+                        "entity_name": "March team sync",
+                    },
+                    {
+                        "kind": "uses_method",
+                        "direction": "incoming",
+                        "entity_id": "paper:training-stability-2024",
+                        "entity_name": "training_stability_2024",
+                    },
+                ],
+            }
+        ],
+    }
 
 
 @pytest.mark.integration
