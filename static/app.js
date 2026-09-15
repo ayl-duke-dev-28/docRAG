@@ -383,13 +383,34 @@ function renderSourceEvidence(source, trace) {
   `;
 }
 
+// Says how the answer context was assembled. "Graph-aware" appears only when
+// a typed relation actually promoted a chunk, so the badge never overstates
+// what the graph did.
+function renderRetrievalMode(retrievalMode, sources) {
+  if (!retrievalMode || retrievalMode === "none") return "";
+  const promoted = (sources || []).filter((source) => source.retrieval === "graph").length;
+  const label = retrievalMode === "graph" ? "Graph-aware retrieval" : "Vector retrieval";
+  const detail = retrievalMode === "graph"
+    ? `${promoted} of ${sources.length} sources promoted by the graph`
+    : "No graph path contributed to this answer";
+  return `
+    <div class="retrieval-mode" data-mode="${escapeHtml(retrievalMode)}">
+      <strong>${escapeHtml(label)}</strong>
+      <span>${escapeHtml(detail)}</span>
+    </div>
+  `;
+}
+
 function renderSources(sources, trace) {
   if (!sources || !sources.length) return "";
   return `
     <div class="sources">
       ${sources.map((source, index) => `
         <details class="source"${index < 2 ? " open" : ""}>
-          <summary>[${index + 1}] ${escapeHtml(source.filename)}, pages ${escapeHtml(source.pages)} · ${escapeHtml(sourceTypeLabel(source.source_type))}</summary>
+          <summary>
+            [${index + 1}] ${escapeHtml(source.filename)}, pages ${escapeHtml(source.pages)} · ${escapeHtml(sourceTypeLabel(source.source_type))}
+            ${source.retrieval === "graph" ? '<span class="source-retrieval">Graph</span>' : ""}
+          </summary>
           ${renderSourceEvidence(source, trace)}
           <p>${escapeHtml(source.text)}</p>
         </details>
@@ -606,7 +627,7 @@ async function ask(question) {
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.detail || "Query failed.");
     modePill.textContent = payload.mode === "rag" ? "LLM RAG" : "Local retrieval";
-    pending.innerHTML = `<p>${escapeHtml(payload.answer)}</p>${renderTrace(payload.trace)}${renderSources(payload.sources, payload.trace)}`;
+    pending.innerHTML = `<p>${escapeHtml(payload.answer)}</p>${renderRetrievalMode(payload.retrieval_mode, payload.sources)}${renderTrace(payload.trace)}${renderSources(payload.sources, payload.trace)}`;
     queryStatusEl.textContent = "Answer ready";
   } finally {
     window.clearInterval(stageTimer);

@@ -250,6 +250,39 @@ button.quiet {
   align-items: center;
 }
 
+.retrieval-mode {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--muted);
+  border-radius: 6px;
+  background: var(--surface);
+  font-size: 12px;
+}
+
+.retrieval-mode[data-mode="graph"] {
+  border-left-color: var(--accent);
+  background: var(--wash);
+}
+
+.retrieval-mode span {
+  color: var(--muted);
+}
+
+.source-retrieval {
+  border: 1px solid #cfd9d5;
+  border-radius: 999px;
+  background: var(--wash);
+  color: #315e56;
+  padding: 2px 7px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
 .entity-browser {
   border: 1px solid var(--line);
   border-radius: 8px;

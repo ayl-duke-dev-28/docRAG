@@ -575,7 +575,12 @@ eval reports, and CI gate are checked in.
 - `GET /api/google-drive/documents`
 - `POST /api/google-drive/import` with JSON `{ "document_ids": ["..."] }`
 - `POST /api/query` with JSON `{ "question": "...", "top_k": 6 }` — returns
-  `{ answer, sources, mode, trace }`, where `trace` is derived from `question`.
+  `{ answer, sources, mode, retrieval_mode, trace }`, where `trace` is derived
+  from `question`. `mode` describes answer generation (`rag`, `retrieval`, or
+  `none`); `retrieval_mode` describes evidence assembly and is `graph` only
+  when a typed relation actually promoted a chunk, `vector` when retrieval
+  stood alone, and `none` without sources. Every source carries the same
+  `retrieval` label, so the UI can mark which passages the graph surfaced.
   When a bounded graph path is found, relation-provenance chunks are
   prioritized in `sources`, deduplicated against vector/FTS results, and
   capped at `top_k`; otherwise retrieval falls back unchanged.

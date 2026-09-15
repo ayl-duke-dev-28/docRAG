@@ -31,7 +31,13 @@ def page_label(page_start, page_end) -> str:
     return "{start}-{end}".format(start=page_start, end=page_end)
 
 
-def row_to_source(row, score: float) -> Dict:
+def row_to_source(row, score: float, retrieval: str = "vector") -> Dict:
+    """Build an answer source. ``retrieval`` records how it reached the context.
+
+    "vector" is baseline similarity or full-text search; "graph" means a typed
+    relation promoted the chunk. The UI labels answers from these, so a chunk
+    is only ever called graph evidence when the graph actually surfaced it.
+    """
     return {
         "chunk_id": row["id"],
         "filename": row["filename"],
@@ -41,6 +47,7 @@ def row_to_source(row, score: float) -> Dict:
         "source_type": (
             row["source_type"] if "source_type" in row.keys() else "upload"
         ),
+        "retrieval": retrieval,
     }
 
 
@@ -122,7 +129,7 @@ def retrieve_graph_aware(
                 continue
             if row is None or chunk_id in seen_chunk_ids:
                 continue
-            sources.append(row_to_source(row, 1.0))
+            sources.append(row_to_source(row, 1.0, retrieval="graph"))
             seen_chunk_ids.add(chunk_id)
 
     for source_item in baseline:
@@ -133,6 +140,19 @@ def retrieve_graph_aware(
         seen_chunk_ids.add(chunk_id)
 
     return sources[:top_k]
+
+
+def retrieval_mode(sources: List[Dict]) -> str:
+    """Name how the answer context was assembled, from the sources themselves.
+
+    Only claims "graph" when a typed relation actually promoted a chunk, so
+    the label can never overstate what the graph contributed.
+    """
+    if not sources:
+        return "none"
+    if any(source.get("retrieval") == "graph" for source in sources):
+        return "graph"
+    return "vector"
 
 
 def answer(
@@ -150,6 +170,7 @@ def answer(
             "answer": "I could not find matching passages in the uploaded papers.",
             "sources": [],
             "mode": "none",
+            "retrieval_mode": "none",
         }
 
     try:
@@ -160,7 +181,12 @@ def answer(
     else:
         llm_error = None
     if generated:
-        return {"answer": generated, "sources": sources, "mode": "rag"}
+        return {
+            "answer": generated,
+            "sources": sources,
+            "mode": "rag",
+            "retrieval_mode": retrieval_mode(sources),
+        }
 
     snippets = []
     for i, source in enumerate(sources[:3], start=1):
@@ -187,6 +213,7 @@ def answer(
         ),
         "sources": sources,
         "mode": "retrieval",
+        "retrieval_mode": retrieval_mode(sources),
     }
 
 
