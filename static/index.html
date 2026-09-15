@@ -40,6 +40,7 @@
             <div id="drive-documents" class="drive-documents"></div>
             <button id="drive-import" type="submit">Import selected</button>
           </form>
+          <p id="drive-import-status" class="meta status-line" aria-live="polite"></p>
         </section>
 
         <section class="graph-status" aria-label="LabGraph status">
@@ -80,6 +81,12 @@
           <label class="sr-only" for="doc-search">Search documents</label>
           <input id="doc-search" type="search" placeholder="Search documents" autocomplete="off" />
           <div class="doc-control-row">
+            <label class="sr-only" for="doc-source">Filter by source</label>
+            <select id="doc-source">
+              <option value="all">All sources</option>
+              <option value="upload">Uploads</option>
+              <option value="google_drive">Google Drive</option>
+            </select>
             <label class="sr-only" for="doc-type">Filter by file type</label>
             <select id="doc-type">
               <option value="all">All types</option>

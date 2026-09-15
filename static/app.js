@@ -3,6 +3,7 @@ const inputEl = document.querySelector("#paper-input");
 const refreshEl = document.querySelector("#refresh-docs");
 const docSearchEl = document.querySelector("#doc-search");
 const docTypeEl = document.querySelector("#doc-type");
+const docSourceEl = document.querySelector("#doc-source");
 const docSortEl = document.querySelector("#doc-sort");
 const docCountEl = document.querySelector("#doc-count");
 const graphCountEl = document.querySelector("#graph-count");
@@ -23,6 +24,7 @@ const driveDisconnectEl = document.querySelector("#drive-disconnect");
 const drivePickerEl = document.querySelector("#drive-picker");
 const driveDocumentsEl = document.querySelector("#drive-documents");
 const driveImportEl = document.querySelector("#drive-import");
+const driveImportStatusEl = document.querySelector("#drive-import-status");
 const uploadStatusEl = document.querySelector("#upload-status");
 const queryStatusEl = document.querySelector("#query-status");
 
@@ -70,13 +72,16 @@ function graphContributionLabel(contribution) {
 function filteredDocuments() {
   const query = docSearchEl.value.trim().toLowerCase();
   const type = docTypeEl.value;
+  const sourceType = docSourceEl.value;
   const sort = docSortEl.value;
 
   return allDocuments
     .filter((doc) => {
       const matchesQuery = !query || doc.filename.toLowerCase().includes(query);
       const matchesType = type === "all" || documentType(doc) === type;
-      return matchesQuery && matchesType;
+      const matchesSource =
+        sourceType === "all" || (doc.source_type || "upload") === sourceType;
+      return matchesQuery && matchesType && matchesSource;
     })
     .sort((a, b) => {
       if (sort === "name") return a.filename.localeCompare(b.filename);
@@ -625,6 +630,7 @@ entitySearchEl.addEventListener("input", scheduleEntityReload);
 entityKindEl.addEventListener("change", scheduleEntityReload);
 docSearchEl.addEventListener("input", renderDocuments);
 docTypeEl.addEventListener("change", renderDocuments);
+docSourceEl.addEventListener("change", renderDocuments);
 docSortEl.addEventListener("change", renderDocuments);
 
 driveConnectEl.addEventListener("click", async () => {
@@ -671,17 +677,20 @@ drivePickerEl.addEventListener("submit", async (event) => {
     addMessage("assistant", "<p>Select at least one Google Doc to import.</p>");
     return;
   }
+  const plural = documentIds.length === 1 ? "" : "s";
   driveImportEl.disabled = true;
   try {
-    addMessage("assistant", "<p>Importing Google Docs and updating the graph…</p>");
+    driveImportStatusEl.textContent = `Importing ${documentIds.length} Google Doc${plural} and updating the graph…`;
     const results = await importGoogleDocuments(documentIds);
     const summary = results.map((result) => {
       const chunks = result.chunks === null ? "already indexed" : `${result.chunks} chunks`;
       return `${escapeHtml(result.filename)}: ${chunks}`;
     }).join("<br>");
     addMessage("assistant", `<p>${summary}</p>`);
+    driveImportStatusEl.textContent = `Indexed ${results.length} Google Doc${results.length === 1 ? "" : "s"}. Filter the library by Google Drive to review them.`;
     await Promise.all([loadDocuments(), refreshGraphViews(), loadGoogleDocuments()]);
   } catch (error) {
+    driveImportStatusEl.textContent = `Import failed: ${error.message}`;
     addMessage("assistant", `<p>${escapeHtml(error.message)}</p>`);
   } finally {
     driveImportEl.disabled = false;
