@@ -13,6 +13,7 @@ const entitySearchEl = document.querySelector("#entity-search");
 const entityKindEl = document.querySelector("#entity-kind");
 const entityListEl = document.querySelector("#entity-list");
 const entityCountEl = document.querySelector("#entity-count");
+const evalListEl = document.querySelector("#eval-list");
 const formEl = document.querySelector("#query-form");
 const questionEl = document.querySelector("#question");
 const messagesEl = document.querySelector("#messages");
@@ -202,6 +203,37 @@ function renderEntityRelations(entity) {
       `).join("")}
     </ul>
   `;
+}
+
+function evalReportLabel(name) {
+  return name.replaceAll("-", " ").replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function renderEvalScores(reports) {
+  if (!reports.length) {
+    evalListEl.innerHTML = '<p class="meta">No eval reports checked in yet. Run python -m evals.runner to generate one.</p>';
+    return;
+  }
+  evalListEl.innerHTML = reports.map((report) => `
+    <div class="eval-report">
+      <span class="eval-name">${escapeHtml(evalReportLabel(report.name))}</span>
+      <span class="meta">${escapeHtml(report.sut)}</span>
+      <span class="eval-score" data-passing="${report.pass_rate === 1 ? "true" : "false"}">
+        ${report.passed}/${report.total} · ${Math.round(report.pass_rate * 100)}%
+      </span>
+    </div>
+  `).join("");
+}
+
+async function loadEvalScores() {
+  try {
+    const response = await fetch("/api/evals");
+    if (!response.ok) throw new Error("Eval scores unavailable.");
+    const payload = await response.json();
+    renderEvalScores(payload.reports || []);
+  } catch (error) {
+    evalListEl.innerHTML = '<p class="meta">Eval scores unavailable.</p>';
+  }
 }
 
 async function refreshGraphViews() {
@@ -765,6 +797,7 @@ formEl.addEventListener("submit", async (event) => {
 
 loadDocuments();
 refreshGraphViews();
+loadEvalScores();
 loadGoogleDriveStatus();
 
 const googleDriveResult = new URLSearchParams(window.location.search).get("google_drive");

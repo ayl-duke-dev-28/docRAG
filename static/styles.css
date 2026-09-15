@@ -250,6 +250,56 @@ button.quiet {
   align-items: center;
 }
 
+.eval-scores {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fbfa;
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.eval-scores h2 {
+  margin: 0;
+}
+
+.eval-list {
+  display: grid;
+  gap: 6px;
+}
+
+.eval-report {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  font-size: 12px;
+}
+
+.eval-name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.eval-score {
+  margin-left: auto;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-weight: 700;
+  background: var(--wash);
+  color: #315e56;
+  white-space: nowrap;
+}
+
+.eval-score[data-passing="false"] {
+  background: #fdf3e6;
+  color: #8a5a12;
+}
+
 .retrieval-mode {
   display: flex;
   align-items: baseline;

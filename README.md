@@ -587,6 +587,11 @@ eval reports, and CI gate are checked in.
   Trace path nodes include `id`, `kind`, `name`, `aliases`, and `attrs`;
   relation provenance uses chunk IDs, which the UI uses to label which sources
   support graph nodes or edges.
+- `GET /api/evals` — the checked-in eval scores under `evals/reports/`,
+  summarized as `{ reports: [{ name, sut, total, passed, failed, pass_rate }] }`.
+  These are scores for the public corpus, not for whatever the running
+  instance has ingested, and the UI labels them that way. A malformed
+  report is logged and skipped rather than breaking the listing.
 - `GET /api/labgraph/stats`
 - `GET /api/labgraph/entities?kind=method&q=curriculum&limit=200` — the
   entity browser feed. Returns `{ total, returned, entities }`, ranked by

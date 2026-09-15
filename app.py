@@ -1,6 +1,7 @@
 import logging
 import re
 import tempfile
+from dataclasses import asdict
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -26,6 +27,7 @@ from docrag.google_drive import (
 from docrag.ingest import ingest_file
 from docrag.retrieval import answer, source
 from docrag.storage import delete_document, get_document, init_db, list_documents, rename_document
+from evals.published import load_published_reports
 from labgraph.browse import DEFAULT_ENTITY_LIMIT, browse_entities, entity_payload
 from labgraph.schema import Entity, EntityKind
 from labgraph.storage import load_graph
@@ -392,6 +394,14 @@ def document_file(document_id: int):
     if not path.exists():
         raise HTTPException(status_code=404, detail="Stored file not found.")
     return FileResponse(path, filename=document["filename"])
+
+
+@app.get("/api/evals")
+def evals():
+    """Serve the checked-in eval scores for the public corpus."""
+    return {
+        "reports": [asdict(report) for report in load_published_reports()]
+    }
 
 
 @app.get("/api/health")
