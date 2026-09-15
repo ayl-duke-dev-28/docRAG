@@ -115,3 +115,20 @@ def test_drive_import_reports_ingestion_status_in_a_live_region():
     assert "driveImportStatusEl" in javascript
     for status in ("Importing", "Indexed", "Import failed"):
         assert status in javascript
+
+
+@pytest.mark.unit
+def test_answers_label_which_retrieval_mode_produced_them():
+    javascript = (ROOT / "static" / "app.js").read_text()
+
+    assert "retrieval_mode" in javascript
+    assert "Graph-aware retrieval" in javascript
+    assert "Vector retrieval" in javascript
+
+
+@pytest.mark.unit
+def test_sources_promoted_by_the_graph_are_marked_individually():
+    javascript = (ROOT / "static" / "app.js").read_text()
+
+    sources = javascript.split("function renderSources", 1)[1].split("\nfunction ", 1)[0]
+    assert 'source.retrieval === "graph"' in sources
