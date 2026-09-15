@@ -490,3 +490,44 @@ def test_evals_endpoint_exposes_the_checked_in_report_scores():
     assert graph["passed"] == graph["total"]
     assert graph["pass_rate"] == 1.0
     assert graph["sut"] == "labgraph-graph-aware"
+
+
+@pytest.mark.integration
+def test_sample_corpus_endpoint_reports_what_it_ingested(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    import app as app_module
+
+    monkeypatch.setattr(
+        app_module,
+        "load_sample_corpus",
+        lambda: {"ingested": 10, "duplicates": 0, "documents": ["a.md"]},
+    )
+
+    response = TestClient(app_module.app).post("/api/sample-corpus")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "ok",
+        "ingested": 10,
+        "duplicates": 0,
+        "documents": ["a.md"],
+    }
+
+
+@pytest.mark.integration
+def test_sample_corpus_failures_surface_as_a_server_error(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    import app as app_module
+    from docrag.sample_corpus import SampleCorpusError
+
+    def explode():
+        raise SampleCorpusError("Sample corpus is missing from this install.")
+
+    monkeypatch.setattr(app_module, "load_sample_corpus", explode)
+
+    response = TestClient(app_module.app).post("/api/sample-corpus")
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Sample corpus is missing from this install."

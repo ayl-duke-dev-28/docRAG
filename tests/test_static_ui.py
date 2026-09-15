@@ -144,3 +144,23 @@ def test_eval_scores_are_visible_and_scoped_to_the_public_corpus():
     assert "pass_rate" in javascript
     # The checked-in scores are for the public corpus, not the user's uploads.
     assert "public corpus" in html.lower() or "public corpus" in javascript.lower()
+
+
+@pytest.mark.unit
+def test_empty_library_offers_to_load_the_sample_corpus():
+    javascript = (ROOT / "static" / "app.js").read_text()
+
+    assert "/api/sample-corpus" in javascript
+    assert 'data-action="load-sample"' in javascript
+    # The empty library is the moment onboarding matters.
+    empty_state = javascript.split('No papers uploaded yet', 1)[0]
+    assert "renderDocuments" in empty_state
+
+
+@pytest.mark.unit
+def test_sample_documents_are_labelled_and_filterable():
+    html = (ROOT / "static" / "index.html").read_text()
+    javascript = (ROOT / "static" / "app.js").read_text()
+
+    assert 'value="sample"' in html
+    assert "Sample corpus" in javascript
