@@ -83,3 +83,35 @@ def test_entity_browser_escapes_graph_supplied_text():
     )[0]
     for interpolation in ("entity.name", "relation.entity_name", "entity.kind"):
         assert f"escapeHtml({interpolation})" in browser
+
+
+@pytest.mark.unit
+def test_library_offers_a_labelled_source_type_filter():
+    html = (ROOT / "static" / "index.html").read_text()
+
+    assert 'id="doc-source"' in html
+    assert 'for="doc-source"' in html
+    for value in ('value="all"', 'value="upload"', 'value="google_drive"'):
+        assert value in html
+
+
+@pytest.mark.unit
+def test_documents_are_filtered_by_source_type():
+    javascript = (ROOT / "static" / "app.js").read_text()
+
+    filters = javascript.split("function filteredDocuments", 1)[1].split("\nfunction ", 1)[0]
+    assert "docSourceEl" in filters
+    assert "source_type" in filters
+
+
+@pytest.mark.unit
+def test_drive_import_reports_ingestion_status_in_a_live_region():
+    html = (ROOT / "static" / "index.html").read_text()
+    javascript = (ROOT / "static" / "app.js").read_text()
+
+    assert 'id="drive-import-status"' in html
+    assert html.count('aria-live="polite"') >= 5
+
+    assert "driveImportStatusEl" in javascript
+    for status in ("Importing", "Indexed", "Import failed"):
+        assert status in javascript
