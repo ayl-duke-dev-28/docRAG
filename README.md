@@ -583,6 +583,12 @@ eval reports, and CI gate are checked in.
   relation provenance uses chunk IDs, which the UI uses to label which sources
   support graph nodes or edges.
 - `GET /api/labgraph/stats`
-- `GET /api/labgraph/entities?kind=method`
+- `GET /api/labgraph/entities?kind=method&q=curriculum&limit=200` — the
+  entity browser feed. Returns `{ total, returned, entities }`, ranked by
+  how many typed relations touch each entity. `q` matches names and
+  aliases case-insensitively, `limit` is clamped to 1–500, and `total`
+  counts every match so the UI can say "showing 200 of 412". Each entity
+  carries `relation_count` plus its `relations`, each with `kind`,
+  `direction` (`incoming` or `outgoing`), `entity_id`, and `entity_name`.
 - `POST /api/labgraph/query-trace` with either `{ "question": "..." }` or an
   explicit `{ "source_id": "...", "target_id": "..." }` pair.

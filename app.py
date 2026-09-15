@@ -26,6 +26,7 @@ from docrag.google_drive import (
 from docrag.ingest import ingest_file
 from docrag.retrieval import answer, source
 from docrag.storage import delete_document, get_document, init_db, list_documents, rename_document
+from labgraph.browse import DEFAULT_ENTITY_LIMIT, browse_entities, entity_payload
 from labgraph.schema import Entity, EntityKind
 from labgraph.storage import load_graph
 from labgraph.trace import (
@@ -265,24 +266,8 @@ def google_drive_import(request: GoogleDriveImportRequest):
     return {"results": results}
 
 
-def entity_to_dict(entity: Entity) -> Dict:
-    return {
-        "id": entity.id,
-        "kind": entity.kind.value,
-        "name": entity.name,
-        "aliases": list(entity.aliases),
-        "attrs": entity.as_attrs_dict(),
-    }
-
-
 def compact_entity(entity: Entity) -> Dict:
-    return {
-        "id": entity.id,
-        "kind": entity.kind.value,
-        "name": entity.name,
-        "aliases": list(entity.aliases),
-        "attrs": entity.as_attrs_dict(),
-    }
+    return entity_payload(entity)
 
 
 def compact_relation(relation) -> Dict:
@@ -339,7 +324,11 @@ def labgraph_stats():
 
 
 @app.get("/api/labgraph/entities")
-def labgraph_entities(kind: Optional[str] = None):
+def labgraph_entities(
+    kind: Optional[str] = None,
+    q: Optional[str] = None,
+    limit: int = DEFAULT_ENTITY_LIMIT,
+):
     graph = load_graph(LABGRAPH_DB_PATH)
     entity_kind = None
     if kind is not None:
@@ -347,7 +336,7 @@ def labgraph_entities(kind: Optional[str] = None):
             entity_kind = EntityKind(kind)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail="Unknown entity kind.") from exc
-    return [entity_to_dict(entity) for entity in graph.entities(kind=entity_kind)]
+    return browse_entities(graph, kind=entity_kind, query=q or "", limit=limit)
 
 
 @app.post("/api/labgraph/query-trace")

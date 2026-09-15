@@ -103,6 +103,32 @@ class LabGraph:
             result.append((relation, neighbor))
         return result
 
+    def incident_relations(
+        self, entity_id: str
+    ) -> List[Tuple[Relation, Entity, str]]:
+        """Return every relation touching an entity, with its direction.
+
+        ``neighbors`` only walks outbound edges, which hides how a sink node
+        such as a Decision is connected. Each item is
+        ``(relation, other_entity, "outgoing" | "incoming")``, ordered by
+        relation kind then neighbour name so callers render stably.
+        """
+        if entity_id not in self._graph:
+            return []
+
+        incident: List[Tuple[Relation, Entity, str]] = []
+        for _, target_id, data in self._graph.out_edges(entity_id, data=True):
+            other = self._graph.nodes[target_id]["entity"]
+            incident.append((data["relation"], other, "outgoing"))
+        for source_id, _, data in self._graph.in_edges(entity_id, data=True):
+            other = self._graph.nodes[source_id]["entity"]
+            incident.append((data["relation"], other, "incoming"))
+
+        return sorted(
+            incident,
+            key=lambda item: (item[0].kind.value, item[1].name.casefold()),
+        )
+
     def shortest_path(
         self, source_id: str, target_id: str, max_depth: int = 3
     ) -> List[str]:
