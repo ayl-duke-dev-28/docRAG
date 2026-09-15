@@ -78,6 +78,8 @@ def test_entity_browser_renders_connectivity_and_typed_relations():
 def test_entity_browser_escapes_graph_supplied_text():
     javascript = (ROOT / "static" / "app.js").read_text()
 
-    browser = javascript.split("function renderEntityBrowser", 1)[1].split("\nfunction ", 1)[0]
+    browser = javascript.split("function renderEntityBrowser", 1)[1].split(
+        "async function loadEntities", 1
+    )[0]
     for interpolation in ("entity.name", "relation.entity_name", "entity.kind"):
         assert f"escapeHtml({interpolation})" in browser

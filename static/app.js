@@ -8,6 +8,10 @@ const docCountEl = document.querySelector("#doc-count");
 const graphCountEl = document.querySelector("#graph-count");
 const graphKindsEl = document.querySelector("#graph-kinds");
 const refreshGraphEl = document.querySelector("#refresh-graph");
+const entitySearchEl = document.querySelector("#entity-search");
+const entityKindEl = document.querySelector("#entity-kind");
+const entityListEl = document.querySelector("#entity-list");
+const entityCountEl = document.querySelector("#entity-count");
 const formEl = document.querySelector("#query-form");
 const questionEl = document.querySelector("#question");
 const messagesEl = document.querySelector("#messages");
@@ -23,6 +27,9 @@ const uploadStatusEl = document.querySelector("#upload-status");
 const queryStatusEl = document.querySelector("#query-status");
 
 let allDocuments = [];
+const ENTITY_SEARCH_DEBOUNCE_MS = 200;
+
+let entitySearchTimer = null;
 
 function escapeHtml(value) {
   return value.replace(/[&<>"']/g, (char) => ({
@@ -151,6 +158,79 @@ async function loadLabgraphStats() {
     .join("");
 }
 
+function renderEntityBrowser(payload) {
+  const entities = payload.entities || [];
+  entityCountEl.textContent = payload.total
+    ? `Showing ${payload.returned} of ${payload.total} entities`
+    : "";
+
+  if (!entities.length) {
+    const filtered = entitySearchEl.value.trim() || entityKindEl.value !== "all";
+    entityListEl.innerHTML = filtered
+      ? '<p class="meta">No entities match these filters. Clear the search or pick another kind.</p>'
+      : '<p class="meta">No graph entities yet. Upload a paper or import from Google Drive to build the graph.</p>';
+    return;
+  }
+
+  entityListEl.innerHTML = entities.map((entity, index) => `
+    <details class="entity"${index < 3 ? " open" : ""}>
+      <summary>
+        <span class="entity-name">${escapeHtml(entity.name)}</span>
+        <span class="entity-kind" data-kind="${escapeHtml(entity.kind)}">${escapeHtml(entityKindLabel(entity.kind))}</span>
+        <span class="meta">${entity.relation_count} relation${entity.relation_count === 1 ? "" : "s"}</span>
+      </summary>
+      ${renderEntityRelations(entity)}
+    </details>
+  `).join("");
+}
+
+function renderEntityRelations(entity) {
+  if (!entity.relations.length) return '<p class="meta">No typed relations yet.</p>';
+  return `
+    <ul class="entity-relations">
+      ${entity.relations.map((relation) => `
+        <li>
+          <span class="relation-kind">${escapeHtml(relationLabel(relation))}</span>
+          <span class="relation-direction">${relation.direction === "incoming" ? "←" : "→"}</span>
+          <span>${escapeHtml(relation.entity_name)}</span>
+        </li>
+      `).join("")}
+    </ul>
+  `;
+}
+
+async function refreshGraphViews() {
+  await Promise.all([loadLabgraphStats(), loadEntities()]);
+}
+
+function showEntityBrowserUnavailable() {
+  entityCountEl.textContent = "";
+  entityListEl.innerHTML = '<p class="meta">Entity browser unavailable. Try Refresh.</p>';
+}
+
+async function loadEntities() {
+  const params = new URLSearchParams();
+  const query = entitySearchEl.value.trim();
+  if (query) params.set("q", query);
+  if (entityKindEl.value !== "all") params.set("kind", entityKindEl.value);
+
+  try {
+    const response = await fetch(`/api/labgraph/entities?${params}`);
+    if (!response.ok) {
+      showEntityBrowserUnavailable();
+      return;
+    }
+    renderEntityBrowser(await response.json());
+  } catch (error) {
+    showEntityBrowserUnavailable();
+  }
+}
+
+function scheduleEntityReload() {
+  window.clearTimeout(entitySearchTimer);
+  entitySearchTimer = window.setTimeout(loadEntities, ENTITY_SEARCH_DEBOUNCE_MS);
+}
+
 function setDriveActions({ configured, connected }) {
   driveConnectEl.classList.toggle("hidden", !configured || connected);
   driveBrowseEl.classList.toggle("hidden", !connected);
@@ -229,7 +309,7 @@ async function uploadFiles(files) {
   addMessage("assistant", `<p>${summary}</p>`);
   uploadStatusEl.textContent = `Finished indexing ${payload.results.length} file${payload.results.length === 1 ? "" : "s"}.`;
   await loadDocuments();
-  await loadLabgraphStats();
+  await refreshGraphViews();
 }
 
 async function updateDocument(documentId, filename) {
@@ -540,7 +620,9 @@ inputEl.addEventListener("change", async (event) => {
 });
 
 refreshEl.addEventListener("click", loadDocuments);
-refreshGraphEl.addEventListener("click", loadLabgraphStats);
+refreshGraphEl.addEventListener("click", refreshGraphViews);
+entitySearchEl.addEventListener("input", scheduleEntityReload);
+entityKindEl.addEventListener("change", scheduleEntityReload);
 docSearchEl.addEventListener("input", renderDocuments);
 docTypeEl.addEventListener("change", renderDocuments);
 docSortEl.addEventListener("change", renderDocuments);
@@ -598,7 +680,7 @@ drivePickerEl.addEventListener("submit", async (event) => {
       return `${escapeHtml(result.filename)}: ${chunks}`;
     }).join("<br>");
     addMessage("assistant", `<p>${summary}</p>`);
-    await Promise.all([loadDocuments(), loadLabgraphStats(), loadGoogleDocuments()]);
+    await Promise.all([loadDocuments(), refreshGraphViews(), loadGoogleDocuments()]);
   } catch (error) {
     addMessage("assistant", `<p>${escapeHtml(error.message)}</p>`);
   } finally {
@@ -652,7 +734,7 @@ formEl.addEventListener("submit", async (event) => {
 });
 
 loadDocuments();
-loadLabgraphStats();
+refreshGraphViews();
 loadGoogleDriveStatus();
 
 const googleDriveResult = new URLSearchParams(window.location.search).get("google_drive");

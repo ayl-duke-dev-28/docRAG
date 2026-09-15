@@ -51,6 +51,27 @@
           <button id="refresh-graph" type="button">Refresh</button>
         </section>
 
+        <section id="entity-browser" class="entity-browser" aria-label="Entity browser">
+          <div class="entity-browser-header">
+            <h2>Entities</h2>
+            <p id="entity-count" class="meta" aria-live="polite"></p>
+          </div>
+          <div class="entity-controls">
+            <label class="sr-only" for="entity-search">Search entities</label>
+            <input id="entity-search" type="search" placeholder="Search entities" autocomplete="off" />
+            <label class="sr-only" for="entity-kind">Filter by entity kind</label>
+            <select id="entity-kind">
+              <option value="all">All kinds</option>
+              <option value="person">People</option>
+              <option value="project">Projects</option>
+              <option value="method">Methods</option>
+              <option value="paper">Papers</option>
+              <option value="decision">Decisions</option>
+            </select>
+          </div>
+          <div id="entity-list" class="entity-list"></div>
+        </section>
+
         <div class="doc-header">
           <h2>Library</h2>
           <button id="refresh-docs" type="button">Refresh</button>
