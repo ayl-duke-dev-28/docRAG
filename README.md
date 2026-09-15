@@ -322,6 +322,17 @@ baseline results last, with stable chunk deduplication and the original limit.
 - [x] **Week 6 — Demo assets + reproducible public corpus.** The public corpus,
       offline seeder, reports, CI gate, browser-verified screenshots, compact
       MP4 overview, and recording script are checked in under `docs/`.
+- [x] **Week 7 — Corpus inspection + onboarding.** The "After That" slice from
+      `DESIGN.md`, built once the answer experience was solid. Shipped: an
+      entity browser in the corpus panel, ranked by connectivity and searchable
+      by name or alias; a source-type filter across uploads, Google Drive, and
+      sample documents, with Drive imports reporting each stage in a live
+      region; honest retrieval-mode labelling, where an answer is only called
+      graph-aware when a typed relation actually promoted a chunk; the
+      checked-in eval scores surfaced in the app and labelled as public-corpus
+      runs rather than the user's own; and one-click sample corpus loading from
+      the empty library, so a fresh install has something to ask about without
+      running a script.
 
 ## Quick start
 

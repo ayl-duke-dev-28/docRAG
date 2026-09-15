@@ -423,11 +423,20 @@ Required changes:
 
 ### After That
 
-1. Add an entity browser in the corpus panel.
-2. Add Google Drive ingestion status and source-type filtering.
-3. Add graph-aware retrieval mode labeling.
-4. Add eval result visibility for the current corpus.
-5. Add demo-ready sample corpus onboarding.
+All five shipped in Week 7:
+
+1. ~~Add an entity browser in the corpus panel.~~ Ranked by connectivity,
+   searchable by name and alias, each entity disclosing its typed relations.
+2. ~~Add Google Drive ingestion status and source-type filtering.~~ Imports
+   name their stage in a live region; the library filters by source.
+3. ~~Add graph-aware retrieval mode labeling.~~ Sources record how they were
+   retrieved, and an answer is only labelled graph-aware when a typed relation
+   actually promoted a chunk.
+4. ~~Add eval result visibility for the current corpus.~~ The checked-in
+   reports are served at `/api/evals` and shown in the corpus panel, labelled
+   as public-corpus runs rather than the user's own uploads.
+5. ~~Add demo-ready sample corpus onboarding.~~ The empty library loads the
+   public corpus in one click, tagged `source_type: sample`.
 
 ## Non-Goals
 
