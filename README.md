@@ -587,6 +587,12 @@ eval reports, and CI gate are checked in.
   Trace path nodes include `id`, `kind`, `name`, `aliases`, and `attrs`;
   relation provenance uses chunk IDs, which the UI uses to label which sources
   support graph nodes or edges.
+- `POST /api/sample-corpus` — ingest the checked-in public corpus into the
+  running instance, the endpoint behind the empty library's onboarding
+  button. Documents are tagged `source_type: sample` so they stay
+  distinguishable and filterable. Re-running is safe: ingestion
+  deduplicates by content hash, so the response counts `ingested` and
+  `duplicates` separately. Returns 503 if the corpus is missing.
 - `GET /api/evals` — the checked-in eval scores under `evals/reports/`,
   summarized as `{ reports: [{ name, sut, total, passed, failed, pass_rate }] }`.
   These are scores for the public corpus, not for whatever the running

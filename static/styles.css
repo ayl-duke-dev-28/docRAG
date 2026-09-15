@@ -250,6 +250,20 @@ button.quiet {
   align-items: center;
 }
 
+.empty-library {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  padding: 14px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.empty-library p {
+  margin: 0;
+}
+
 .eval-scores {
   border: 1px solid var(--line);
   border-radius: 8px;

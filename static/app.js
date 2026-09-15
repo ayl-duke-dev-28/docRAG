@@ -58,8 +58,14 @@ function documentType(doc) {
   return match ? match[1] : "";
 }
 
+const SOURCE_TYPE_LABELS = {
+  google_drive: "Google Drive",
+  sample: "Sample corpus",
+  upload: "Upload",
+};
+
 function sourceTypeLabel(sourceType) {
-  return sourceType === "google_drive" ? "Google Drive" : "Upload";
+  return SOURCE_TYPE_LABELS[sourceType] || "Upload";
 }
 
 function graphContributionLabel(contribution) {
@@ -103,7 +109,12 @@ function renderDocuments() {
     : "";
 
   if (!allDocuments.length) {
-    documentsEl.innerHTML = '<div class="meta">No papers uploaded yet.</div>';
+    documentsEl.innerHTML = `
+      <div class="empty-library">
+        <p class="meta">No papers uploaded yet. Drop your own, or start with the sample corpus of lab papers and meeting notes.</p>
+        <button type="button" data-action="load-sample">Load the sample corpus</button>
+      </div>
+    `;
     return;
   }
 
@@ -345,6 +356,20 @@ async function uploadFiles(files) {
   }).join("<br>");
   addMessage("assistant", `<p>${summary}</p>`);
   uploadStatusEl.textContent = `Finished indexing ${payload.results.length} file${payload.results.length === 1 ? "" : "s"}.`;
+  await loadDocuments();
+  await refreshGraphViews();
+}
+
+async function loadSampleCorpus() {
+  uploadStatusEl.textContent = "Loading the sample corpus and building the graph…";
+  const response = await fetch("/api/sample-corpus", { method: "POST" });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.detail || "Could not load the sample corpus.");
+
+  const parts = [`Indexed ${payload.ingested} sample document${payload.ingested === 1 ? "" : "s"}`];
+  if (payload.duplicates) parts.push(`${payload.duplicates} already indexed`);
+  uploadStatusEl.textContent = `${parts.join(" · ")}. Ask a multi-hop question to see the graph trace.`;
+  addMessage("assistant", `<p>${escapeHtml(parts.join(" · "))}. Try: "What did Alex Liu decide at the March team sync?"</p>`);
   await loadDocuments();
   await refreshGraphViews();
 }
@@ -753,6 +778,18 @@ drivePickerEl.addEventListener("submit", async (event) => {
 documentsEl.addEventListener("click", async (event) => {
   const button = event.target.closest("button[data-action]");
   if (!button) return;
+
+  if (button.dataset.action === "load-sample") {
+    button.disabled = true;
+    try {
+      await loadSampleCorpus();
+    } catch (error) {
+      uploadStatusEl.textContent = `Sample corpus failed: ${error.message}`;
+      addMessage("assistant", `<p>${escapeHtml(error.message)}</p>`);
+      button.disabled = false;
+    }
+    return;
+  }
 
   const documentId = button.dataset.documentId;
   const doc = allDocuments.find((item) => String(item.id) === documentId);

@@ -26,6 +26,7 @@ from docrag.google_drive import (
 )
 from docrag.ingest import ingest_file
 from docrag.retrieval import answer, source
+from docrag.sample_corpus import SampleCorpusError, load_sample_corpus
 from docrag.storage import delete_document, get_document, init_db, list_documents, rename_document
 from evals.published import load_published_reports
 from labgraph.browse import DEFAULT_ENTITY_LIMIT, browse_entities, entity_payload
@@ -394,6 +395,17 @@ def document_file(document_id: int):
     if not path.exists():
         raise HTTPException(status_code=404, detail="Stored file not found.")
     return FileResponse(path, filename=document["filename"])
+
+
+@app.post("/api/sample-corpus")
+def sample_corpus():
+    """Ingest the checked-in public corpus into this instance."""
+    try:
+        result = load_sample_corpus()
+    except SampleCorpusError as exc:
+        logger.exception("Sample corpus load failed")
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return {"status": "ok", **result}
 
 
 @app.get("/api/evals")
