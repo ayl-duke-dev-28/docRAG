@@ -132,3 +132,15 @@ def test_sources_promoted_by_the_graph_are_marked_individually():
 
     sources = javascript.split("function renderSources", 1)[1].split("\nfunction ", 1)[0]
     assert 'source.retrieval === "graph"' in sources
+
+
+@pytest.mark.unit
+def test_eval_scores_are_visible_and_scoped_to_the_public_corpus():
+    html = (ROOT / "static" / "index.html").read_text()
+    javascript = (ROOT / "static" / "app.js").read_text()
+
+    assert 'id="eval-scores"' in html
+    assert "/api/evals" in javascript
+    assert "pass_rate" in javascript
+    # The checked-in scores are for the public corpus, not the user's uploads.
+    assert "public corpus" in html.lower() or "public corpus" in javascript.lower()

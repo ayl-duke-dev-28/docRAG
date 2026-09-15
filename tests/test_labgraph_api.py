@@ -474,3 +474,19 @@ def test_ingestion_rolls_back_when_graph_extraction_fails(
 
     assert storage_module.list_documents() == []
     assert list(uploads_path.iterdir()) == []
+
+
+@pytest.mark.integration
+def test_evals_endpoint_exposes_the_checked_in_report_scores():
+    import app as app_module
+
+    response = TestClient(app_module.app).get("/api/evals")
+
+    assert response.status_code == 200
+    payload = response.json()
+    names = {report["name"] for report in payload["reports"]}
+    assert {"public-graph", "public-baseline"} <= names
+    graph = next(r for r in payload["reports"] if r["name"] == "public-graph")
+    assert graph["passed"] == graph["total"]
+    assert graph["pass_rate"] == 1.0
+    assert graph["sut"] == "labgraph-graph-aware"
